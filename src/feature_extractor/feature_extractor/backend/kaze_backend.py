@@ -4,11 +4,11 @@ from matplotlib import pyplot as plt
 
 from . import Backend
 
-class ORBBackend(Backend):
+class KAZEBackend(Backend):
 
     def __init__(self):
-        self._extractor = cv2.ORB_create()
+        self._extractor = cv2.KAZE_create()
 
     def extract_features(self, image):
-        return self._extractor.compute(image, None)
+        return self._extractor.detectAndCompute(image, None)
 
