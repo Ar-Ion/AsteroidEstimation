@@ -10,5 +10,5 @@ class ORBBackend(Backend):
         self._extractor = cv2.ORB_create()
 
     def extract_features(self, image):
-        return self._extractor.compute(image, None)
+        return self._extractor.detectAndCompute(image, None)
 
