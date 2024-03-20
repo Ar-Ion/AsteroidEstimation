@@ -3,12 +3,14 @@ import rclpy
 from feature_extractor.frontend import ROSFrontend
 from feature_extractor.backend import ORBBackend
 from feature_extractor.evaluator import Evaluator
+from feature_extractor.ground_truth import MotionModel
 
 def main(args=None):
     rclpy.init(args=args)
 
     backend = ORBBackend()
-    evaluator = Evaluator(backend)
+    motion_model = MotionModel()
+    evaluator = Evaluator(backend, motion_model)
     frontend = ROSFrontend(evaluator)
 
     frontend.loop()
