@@ -34,6 +34,8 @@ class ROSFrontend(Node, Frontend):
             10
         )
 
+        self.get_logger().info("ROS2 frontend initialized")
+
     def rgb_callback(self, msg):
         with self._lock:
             self._last_rgb_msg = msg
@@ -57,6 +59,7 @@ class ROSFrontend(Node, Frontend):
         self._evaluator.on_input(timestamp, image, depth)
 
     def loop(self):
+        self.get_logger().info("Running ROS2 frontend...")
         rclpy.spin(self)
 
     def cleanup(self):
