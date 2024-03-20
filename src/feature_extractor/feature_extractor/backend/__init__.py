@@ -1,6 +1,5 @@
 from .backend import Backend
 from .akaze_backend import AKAZEBackend
-from .brief_backend import BRIEFBackend
 from .brisk_backend import BRISKBackend
 from .fast_backend import FASTBackend
 from .kaze_backend import KAZEBackend
