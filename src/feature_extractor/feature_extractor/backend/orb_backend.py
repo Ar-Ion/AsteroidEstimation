@@ -7,7 +7,7 @@ from . import Backend
 class ORBBackend(Backend):
 
     def __init__(self):
-        self._extractor = cv2.ORB_create()
+        self._extractor = cv2.ORB_create(nfeatures=100)
 
     def extract_features(self, image):
         return self._extractor.detectAndCompute(image, None)
