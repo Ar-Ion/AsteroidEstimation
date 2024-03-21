@@ -23,6 +23,9 @@ class Evaluator:
 
         new_trajectories = [None] * len(next_kps)
 
+        # Propagate the motion model, so that we can compare the result of the backend with the ground-truth
+        self._motion_model.propagate()
+
         # Only run if previous keypoints were recorded
         if prev_kps != None:
             # Match features between frames
@@ -30,10 +33,10 @@ class Evaluator:
             
             # Each matching keypoint is added to the previously initialized trajectory
             for match in matches:
-                next_kp = next_kps[match.queryIdx]
-                new_trajectory = self._prev_trajectories[match.imgIdx]
+                next_kp = next_kps[match.trainIdx]
+                new_trajectory = self._prev_trajectories[match.queryIdx]
                 new_trajectory.add_measured_keypoint(next_kp, match.distance)
-                new_trajectories[match.queryIdx] = new_trajectory
+                new_trajectories[match.trainIdx] = new_trajectory
 
         # If a keypoint does not have a matching feature in the previous frame, initialize a new trajectory
         for i in range(len(new_trajectories)):

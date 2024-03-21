@@ -11,7 +11,7 @@ def main(args=None):
     backend = ORBBackend()
     motion_model = MotionModel()
     evaluator = Evaluator(backend, motion_model)
-    frontend = ROSFrontend(evaluator)
+    frontend = ROSFrontend(evaluator, motion_model)
 
     frontend.loop()
     frontend.cleanup()
