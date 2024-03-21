@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 
 from feature_extractor.trajectory import Trajectory
+from feature_extractor.statistics import ErrorStatistics
 
 class Evaluator:
 
@@ -9,9 +10,10 @@ class Evaluator:
     def __init__(self, backend, motion_model):
         self._backend = backend
         self._motion_model = motion_model
+        self._stats = ErrorStatistics()
 
          # Bruteforce matcher works better for small number of features
-        self._feature_matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+        self._feature_matcher = cv2.BFMatcher(backend.get_match_norm(), crossCheck=True)
         self._prev_features = (None, None)
         self._prev_trajectories = None
 
@@ -49,6 +51,10 @@ class Evaluator:
                 y = unknown_kp.pt[1]
                 z = depth[int(x)][int(y)]
 
-                new_trajectories[i] = Trajectory(np.array([x, y, z]), self._motion_model)
+                new_trajectories[i] = Trajectory(
+                    np.array([[x], [y], [z]]), 
+                    self._motion_model, 
+                    trajectory_complete_cb=self._stats.add_trajectory
+                )
 
         self._prev_trajectories = new_trajectories
