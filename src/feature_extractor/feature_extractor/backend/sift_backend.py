@@ -12,3 +12,5 @@ class SIFTBackend(Backend):
     def extract_features(self, image):
         return self._extractor.detectAndCompute(image, None)
 
+    def get_match_norm(self):
+        return cv2.NORM_L2
