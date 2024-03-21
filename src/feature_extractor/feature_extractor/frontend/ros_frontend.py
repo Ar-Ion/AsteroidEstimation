@@ -23,6 +23,7 @@ class ROSFrontend(Node, Frontend):
         self._motion_model = motion_model
         self._last_rgb_msg = Image()
         self._last_depth_msg = Image()
+        self._last_info_msg = CameraInfo()
         self._lock = threading.Lock()
         self._cv_bridge = CvBridge()
                 
@@ -63,17 +64,25 @@ class ROSFrontend(Node, Frontend):
             self.on_potential_sync()
 
     def info_callback(self, msg):
-        intrinsics = Intrinsics(np.array(msg.k).reshape(3, 3))
-        self._motion_model.set_camera_intrinsics(intrinsics)
+        with self._lock:
+            self._last_info_msg = msg
+            self.on_potential_sync()
 
     def on_potential_sync(self):
-        if self._last_rgb_msg.header.stamp == self._last_depth_msg.header.stamp:
-            self.on_sync(self._last_rgb_msg.header.stamp.sec * 1e9 + self._last_rgb_msg.header.stamp.nanosec)
+        rgb_stamp = self._last_rgb_msg.header.stamp
+        depth_stamp = self._last_depth_msg.header.stamp
+        info_stamp = self._last_info_msg.header.stamp
+        
+        if rgb_stamp == depth_stamp and depth_stamp == info_stamp:
+            self.on_sync(rgb_stamp.sec * 1e9 + rgb_stamp.nanosec)
 
     # Timestamp in nanoseconds
     def on_sync(self, timestamp):
+        intrinsics = Intrinsics(np.array(self._last_info_msg.k).reshape(3, 3))        
         image = self._cv_bridge.imgmsg_to_cv2(self._last_rgb_msg, "mono8")
         depth = self._cv_bridge.imgmsg_to_cv2(self._last_depth_msg, "32FC1")
+
+        self._motion_model.set_camera_intrinsics(intrinsics)
 
         try:
             t = self._tf_buffer.lookup_transform("camera", "asteroid", rclpy.time.Time())
