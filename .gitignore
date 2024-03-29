@@ -5,6 +5,7 @@
 .pydevproject
 .DS_Store
 .idea
+*.csv
 
 .vscode/*
 !.vscode/extensions.json
