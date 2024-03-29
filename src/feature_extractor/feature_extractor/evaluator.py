@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from matplotlib import pyplot as plt
 
 from feature_extractor.trajectory import Trajectory
 from feature_extractor.statistics import ErrorStatistics
@@ -16,12 +17,15 @@ class Evaluator:
         self._feature_matcher = cv2.BFMatcher(backend.get_match_norm(), crossCheck=True)
         self._prev_features = (None, None)
         self._prev_trajectories = None
+        self._prev_image = None
 
     # Timestamp in nanoseconds
     def on_input(self, timestamp, image, depth):
         prev_kps, prev_dess = self._prev_features
         self._prev_features = self._backend.extract_features(image)
         next_kps, next_dess = self._prev_features
+        prev_image = self._prev_image
+        self._prev_image = image
 
         new_trajectories = [None] * len(next_kps)
 
@@ -33,6 +37,13 @@ class Evaluator:
             # Match features between frames
             matches = self._feature_matcher.match(prev_dess, next_dess)        
             
+            print(str(len(matches)) + " out of " + str(len(next_dess)))
+
+            # image = cv2.drawMatches(255*prev_image,prev_kps,255*image,next_kps,matches[:10],None,flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+            # plt.figure()
+            # plt.imshow(image)
+            # plt.show()
+
             # Each matching keypoint is added to the previously initialized trajectory
             for match in matches:
                 next_kp = next_kps[match.trainIdx]
@@ -47,14 +58,17 @@ class Evaluator:
                 unknown_kp = next_kps[i]
 
                 # Extract x-y-z pseudo-coordinates in camera frame (ground truth)
-                x = unknown_kp.pt[0]
-                y = unknown_kp.pt[1]
-                z = depth[int(x)][int(y)]
-
+                x = float(unknown_kp.pt[0])
+                y = float(unknown_kp.pt[1])
+                z = float(depth[int(y)][int(x)])
+                                
                 new_trajectories[i] = Trajectory(
-                    np.array([[x], [y], [z]]), 
+                    np.array([x, y, z]), 
                     self._motion_model, 
                     trajectory_complete_cb=self._stats.add_trajectory
                 )
 
         self._prev_trajectories = new_trajectories
+
+    def on_finish(self):
+        self._stats.display_statistics()
