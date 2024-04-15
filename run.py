@@ -1,2 +1,2 @@
-import subprocess
-subprocess.call('./run.sh')
+from feature_extractor.main import main
+main()
