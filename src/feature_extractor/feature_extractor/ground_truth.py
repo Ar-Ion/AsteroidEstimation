@@ -1,5 +1,3 @@
-import numpy as np
-
 class MotionModel:
     def __init__(self):
         self._intrinsics = None
@@ -23,8 +21,8 @@ class MotionModel:
 
     def camera2object(self, point):
         self.ensure_ready()
-        return self._extrinsics.revert(self._intrinsics.revert(point))
+        return self._extrinsics.revert(self._intrinsics.revert(point.float()))
 
     def object2camera(self, point):
         self.ensure_ready()
-        return self._intrinsics.apply(self._extrinsics.apply(point))
+        return self._intrinsics.apply(self._extrinsics.apply(point.float()))
