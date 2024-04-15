@@ -106,8 +106,8 @@ class COFFEEBackend(Backend):
         x_avg = np.mean(descriptors[:, :, 0], axis=1)  
         y_avg = np.mean(descriptors[:, :, 1], axis=1)  
         z_avg = np.mean(descriptors[:, :, 2], axis=1) 
-        x_std = np.zeros((descriptors.shape[0]))#np.std(descriptors[:, :, 0], axis=1)
-        y_std = np.zeros((descriptors.shape[0]))#np.std(descriptors[:, :, 1], axis=1)
+        x_std = np.ones((descriptors.shape[0]))#np.std(descriptors[:, :, 0], axis=1)
+        y_std = np.ones((descriptors.shape[0]))#np.std(descriptors[:, :, 1], axis=1)
 
         centering_vec = np.array([[x_avg], [y_avg], np.zeros((1, descriptors.shape[0]))]).T
         scaling_vec = np.array([[x_std], [y_std], [1/z_avg]]).T
