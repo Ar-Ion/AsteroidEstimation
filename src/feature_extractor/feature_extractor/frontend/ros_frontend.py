@@ -17,7 +17,7 @@ from feature_extractor.camera_utils import Extrinsics, Intrinsics
 
 class ROSFrontend(Node, Frontend):
 
-    def __init__(self, evaluator, motion_model):
+    def __init__(self, evaluator, motion_model, buffer_size=1):
         super().__init__('feature_extractor_frontend')
 
         self._evaluator = evaluator
@@ -55,7 +55,7 @@ class ROSFrontend(Node, Frontend):
         self._tf_listener = TransformListener(self._tf_buffer, self)
         
         self._simulation_buffer = []
-        self._simulation_buffer_size = 10000
+        self._simulation_buffer_size = buffer_size
         self.get_logger().info("ROS2 frontend initialized")
 
     def rgb_callback(self, msg):
@@ -97,7 +97,7 @@ class ROSFrontend(Node, Frontend):
               
             if len(self._simulation_buffer) < self._simulation_buffer_size:
                 self._simulation_buffer.append((timestamp, intrinsics, extrinsics, image, depth))
-                self.get_logger().info("Acquired frame " + str(len(self._simulation_buffer)))
+                #self.get_logger().info("Acquired frame " + str(len(self._simulation_buffer)))
             
         except TransformException:
             self.get_logger().info("Still waiting for the camera to asteroid transform...")
@@ -109,9 +109,8 @@ class ROSFrontend(Node, Frontend):
                 self._motion_model.set_camera_extrinsics(extrinsics)
                 self._evaluator.on_input(timestamp, image, depth)
 
-                self.get_logger().info("Evaluated frame " + str(i))
+                #self.get_logger().info("Evaluated frame " + str(i))
 
-            self._evaluator.on_finish()
             self._simulation_buffer.clear()
 
 
