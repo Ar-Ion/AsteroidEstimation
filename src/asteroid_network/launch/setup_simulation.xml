@@ -1,0 +1,11 @@
+<launch>
+  <node name="rgb_compressor" pkg="image_transport" exec="republish" output="screen" args="raw theora">
+    <remap from="in" to="/camera/rgb" />
+    <remap from="out/theora" to="/camera_compressed/rgb" />
+  </node>
+  
+  <node name="depth_compressor" pkg="image_transport" exec="republish" output="screen" args="raw compressedDepth">
+    <remap from="in" to="/camera/depth" />
+    <remap from="out/compressedDepth" to="/camera_compressed/depth" />
+  </node>
+</launch>
