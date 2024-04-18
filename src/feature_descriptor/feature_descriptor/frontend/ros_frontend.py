@@ -13,7 +13,7 @@ from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 
 from . import Frontend
-from feature_extractor.camera_utils import Extrinsics, Intrinsics
+from feature_descriptor.camera_utils import Extrinsics, Intrinsics
 
 class ROSFrontend(Node, Frontend):
 

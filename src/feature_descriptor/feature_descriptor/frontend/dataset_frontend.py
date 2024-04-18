@@ -5,7 +5,7 @@ import quaternion
 from datetime import datetime
 
 from . import Frontend
-from feature_extractor.camera_utils import Extrinsics, Intrinsics
+from feature_descriptor.camera_utils import Extrinsics, Intrinsics
 
 class DatasetFrontend(Frontend):
 
