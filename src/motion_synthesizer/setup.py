@@ -1,8 +1,6 @@
 from setuptools import find_packages, setup
-from glob import glob
-import os
 
-package_name = 'feature_descriptor'
+package_name = 'motion_synthesizer'
 
 setup(
     name=package_name,
@@ -12,8 +10,6 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        (os.path.join('share', package_name, 'cuda_modules'), glob('**/*.cpp', recursive=True)),
-        (os.path.join('share', package_name, 'cuda_kernels'), glob('**/*.cu', recursive=True))
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -24,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'node = feature_descriptor.node:main'
+            'node = motion_synthesizer.node:main',
+            'verify = motion_synthesizer.verify:main'
         ],
     },
 )

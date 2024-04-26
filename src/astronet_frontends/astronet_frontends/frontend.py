@@ -1,7 +1,10 @@
 class Frontend:
     
     # No callback is give to the constructor as it is often wrapped in an AsyncFrontend object
-    def __init__(self):
+    def __init__(self, source, mode, size):
+        self.source = source
+        self.mode = mode
+        self.size = size
         self._rx_callback = None
         
     # Updates the callback function that will be called when we receive new data
@@ -33,6 +36,6 @@ class Frontend:
         pass
     
     # Called by the frontend whenever sth is received
-    def receive(self, data):
+    def on_receive(self, data):
         if self._rx_callback != None:
             self._rx_callback(data)

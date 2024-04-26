@@ -1,6 +1,6 @@
 import threading
+import multiprocessing
 import queue
-import sys
 
 # Make each AsyncEvent unique and comparable by memory location
 class AsyncEvent:
@@ -27,9 +27,9 @@ class AsyncFrontend:
         self._mode = mode
         
     def start(self):        
-        self._event_queue = queue.Queue(16)
-        self._data_input_queue = queue.Queue(1024)
-        self._data_output_queue = queue.Queue(1024)
+        self._event_queue = multiprocessing.Queue(16)
+        self._data_input_queue = multiprocessing.Queue(1024)
+        self._data_output_queue = multiprocessing.Queue(1024)
         
         # Defines an async subprocess to speed up the data transmission/reception pipeline.
         # Arguments are passed as simple object and queues to simplify memory management.
@@ -69,9 +69,12 @@ class AsyncFrontend:
     # The AsyncFrontend objects must be designed to have the transmission and reception systems run on a single thread.
     # A packet can only be received if the front-end transmits something, which is a weak assumption for this project
     def run(mode, frontend, event_queue, data_input_queue, data_output_queue):
+        def rx_callback(data):
+            #print("write " + str(data_output_queue.qsize()))
+            data_output_queue.put(data)
         
-        frontend.set_receive_callback(lambda x: data_output_queue.put(x))
-
+        frontend.set_receive_callback(rx_callback)
+        
         while True:
             # Tick frontend
             frontend.on_tick()
@@ -94,6 +97,7 @@ class AsyncFrontend:
     # Fetches new data from the the async subprocess. May return None if no new data has been received.    
     def receive(self, blocking=False):
         try:
+            #print("read " + str(self._data_output_queue.qsize()))
             return self._data_output_queue.get(blocking)
         except queue.Empty:
             return None

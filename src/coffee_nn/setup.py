@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 from glob import glob
 import os
 
-package_name = 'feature_descriptor'
+package_name = 'coffee_nn'
 
 setup(
     name=package_name,
@@ -11,9 +11,7 @@ setup(
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
-        ('share/' + package_name, ['package.xml']),
-        (os.path.join('share', package_name, 'cuda_modules'), glob('**/*.cpp', recursive=True)),
-        (os.path.join('share', package_name, 'cuda_kernels'), glob('**/*.cu', recursive=True))
+        ('share/' + package_name, ['package.xml'])
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -24,7 +22,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'node = feature_descriptor.node:main'
+            'train_node = coffee_nn.train_node:main'
         ],
     },
 )

@@ -1,47 +1,41 @@
 import rclpy
 
-import astronet_frontends
-import feature_descriptor.backends
-from astronet_frontends import AsyncFrontend
-
+from astronet_frontends import AsyncFrontend, factory
+from .generator import MotionGenerator
+ 
 def main(args=None):
     rclpy.init(args=args)
     
-    node = rclpy.create_node("feature_descriptor_node")
+    node = rclpy.create_node("motion_synthesizer_node")
     
-    node.declare_parameter("size", 8192)
-    node.declare_parameter("mode", "validate")
+    node.declare_parameter("size", 65536)
+    node.declare_parameter("mode", "test")
 
     node.declare_parameters("input", [
         ("type", "DriveClientFrontend"),
-        ("path", "/home/arion/AsteroidImageDataset")
+        ("path", "/home/arion/AsteroidFeatureDataset")
     ])
     
     node.declare_parameters("output", [
         ("type", "DriveServerFrontend"),
-        ("path", "/home/arion/AsteroidFeatureDataset")
-    ])
-
-    node.declare_parameters("backend", [
-        ("type", "COFFEE_Backend")
+        ("path", "/home/arion/AsteroidMotionDataset")
     ])
     
     size = node.get_parameter("size").value
     mode = node.get_parameter("mode").value
     input_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("input").items()))
     output_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("output").items()))
-    backend_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("backend").items()))
     
-    client_wrapped = astronet_frontends.factory.instance(input_params, mode, size)
-    server_wrapped = astronet_frontends.factory.instance(output_params, mode, size)
-
+    client_wrapped = factory.instance(input_params, mode, size)
+    server_wrapped = factory.instance(output_params, mode, size/2) # Each output motion requires two input images
+    
     client = AsyncFrontend(client_wrapped, AsyncFrontend.Modes.NO_WAIT)
     server = AsyncFrontend(server_wrapped, AsyncFrontend.Modes.WAIT)
 
     client.start()
     server.start()
     
-    backend = backends.factory.instance()
+    backend = MotionGenerator(client, server, size, size/2)
 
     try:
         backend.loop()
@@ -50,7 +44,7 @@ def main(args=None):
         pass
     finally:
         client.stop()
-        server.stop()  
-    
+        server.stop()
+
 if __name__ == '__main__':
     main()
