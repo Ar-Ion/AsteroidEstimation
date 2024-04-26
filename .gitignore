@@ -15,3 +15,5 @@
 build
 install
 log
+wandb
+nohup.out
