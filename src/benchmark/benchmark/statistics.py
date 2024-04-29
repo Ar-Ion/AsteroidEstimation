@@ -8,11 +8,11 @@ class MatchMetric(ABC):
 
 class L2(MatchMetric):
     def dist(a, b):
-        return torch.cdist(a.float(), b.float()).to(dtype=torch.float16)
+        return torch.cdist(a.float(), b.float()).to(dtype=torch.float32)
     
 class Cosine(MatchMetric):
     def dist(a, b):
-        return (a @ b.T).to(dtype=torch.float16)
+        return (a @ b.T).to(dtype=torch.float32)
     
 class MatchCriterion(ABC):
     @abstractmethod
@@ -25,7 +25,7 @@ class LowerThanCriterion(MatchCriterion):
     
     def apply(self, dist_matrix):
         match_matrix = (dist_matrix < self._epsilon)
-        return match_matrix.to(dtype=torch.float16)
+        return match_matrix.to(dtype=torch.float32)
 
 class GreaterThanCriterion(MatchCriterion):
     def __init__(self, epsilon):
@@ -33,7 +33,7 @@ class GreaterThanCriterion(MatchCriterion):
         
     def apply(self, dist_matrix):
         match_matrix = (dist_matrix > self._epsilon)
-        return match_matrix.to(dtype=torch.float16)
+        return match_matrix.to(dtype=torch.float32)
 
 class RatioCriterion(MatchCriterion):
     def __init__(self, ratio):
@@ -42,7 +42,7 @@ class RatioCriterion(MatchCriterion):
     def apply(self, dist_matrix):
         top = torch.topk(dist_matrix, 2, dim=0)
         match_matrix = dist_matrix > self._ratio*top.values[1]
-        return match_matrix.to(dtype=torch.float16)
+        return match_matrix.to(dtype=torch.float32)
     
 class PassThroughCriterion(MatchCriterion):
     def apply(self, dist_matrix):
