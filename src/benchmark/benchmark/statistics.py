@@ -1,10 +1,16 @@
 from abc import ABC, abstractmethod
+import importlib
 import torch
 
 class MatchMetric(ABC):
     @abstractmethod
     def dist(a, b):
         pass
+
+    def instance(type):
+        module = importlib.import_module("benchmark.statistics")
+        metric_class = getattr(module, type)
+        return metric_class
 
 class L2(MatchMetric):
     def dist(a, b):
@@ -18,8 +24,14 @@ class MatchCriterion(ABC):
     @abstractmethod
     def apply(self, dist_matrix):
         pass
+
+    def instance(type, *args):
+        module = importlib.import_module("benchmark.statistics")
+        criterion_class = getattr(module, type)
+        criterion = criterion_class(*args)
+        return criterion
     
-class LowerThanCriterion(MatchCriterion):
+class LowerThan(MatchCriterion):
     def __init__(self, epsilon):
         self._epsilon = epsilon
     
@@ -27,7 +39,7 @@ class LowerThanCriterion(MatchCriterion):
         match_matrix = (dist_matrix < self._epsilon)
         return match_matrix.to(dtype=torch.float32)
 
-class GreaterThanCriterion(MatchCriterion):
+class GreaterThan(MatchCriterion):
     def __init__(self, epsilon):
         self._epsilon = epsilon
         
@@ -35,7 +47,7 @@ class GreaterThanCriterion(MatchCriterion):
         match_matrix = (dist_matrix > self._epsilon)
         return match_matrix.to(dtype=torch.float32)
 
-class RatioCriterion(MatchCriterion):
+class Ratio(MatchCriterion):
     def __init__(self, ratio):
         self._ratio = ratio
     
@@ -44,7 +56,7 @@ class RatioCriterion(MatchCriterion):
         match_matrix = dist_matrix > self._ratio*top.values[1]
         return match_matrix.to(dtype=torch.float32)
     
-class PassThroughCriterion(MatchCriterion):
+class PassThrough(MatchCriterion):
     def apply(self, dist_matrix):
         return dist_matrix
     
