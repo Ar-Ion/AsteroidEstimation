@@ -1,0 +1,58 @@
+gen_descriptor:
+  ros__parameters:
+    input:
+      type: "DriveClientFrontend"
+      path: "/home/arion/AsteroidImageDataset"
+
+    output:
+      type: "DriveServerFrontend"
+      path: "/home/arion/AsteroidFeatureDataset"
+
+gen_synthesizer:
+  ros__parameters:
+    input:
+      type: "DriveClientFrontend"
+      path: "/home/arion/AsteroidFeatureDataset"
+
+    output:
+      type: "DriveServerFrontend"
+      path: "/home/arion/AsteroidMotionDataset"
+
+trainer:
+  ros__parameters:
+    input:
+      type: "DriveClientFrontend"
+      path: "/home/arion/AsteroidMotionDataset"
+
+    output:
+      model_type: "PTH"
+      model_path: "/home/arion/AsteroidModel.pth"
+
+eval_descriptor:
+  ros__parameters: 
+    input:
+      type: "DriveClientFrontend"
+      path: "/home/arion/AsteroidImageDataset"
+
+    output:
+      type: "DriveServerFrontend"
+
+    backend:
+      model_type: "PTH"
+      model_path: "/home/arion/AsteroidModel.pth"
+
+eval_synthesizer:
+  ros__parameters:
+    input:
+      type: "DriveClientFrontend"
+
+    output:
+      type: "DriveServerFrontend"
+
+eval_benchmarker:
+  ros__parameters:
+    input:
+      type: "DriveClientFrontend"
+
+    output:
+      type: "Plots"

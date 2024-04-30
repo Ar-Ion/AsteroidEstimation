@@ -1,0 +1,12 @@
+eval_benchmarker:
+  ros__parameters: 
+    config:
+      coords:
+        metric: "L2"
+        criterion: "LowerThan"
+        criterion_args: [16.0]
+
+      features:
+        metric: "Cosine"
+        criterion: "GreaterThan"
+        criterion_args: [0.3]
