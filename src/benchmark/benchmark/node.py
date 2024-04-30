@@ -1,45 +1,52 @@
 import rclpy
-import numpy as np
-import torch
-from matplotlib import pyplot as plt
 
-from astronet_frontends import AsyncFrontend, DriveClientFrontend
+import astronet_frontends.factory
+from astronet_frontends import AsyncFrontend
+
+from .benchmarker import Benchmarker
 
 def main(args=None):
     rclpy.init(args=args)
 
-    size = 700
+    node = rclpy.create_node("benchmark_node")
 
-    frontend_wrapped = DriveClientFrontend("/home/arion/AsteroidMotionDataset/test", size)
+    node.declare_parameter("size", rclpy.Parameter.Type.INTEGER)
+
+    node.declare_parameters("", [
+        ("input.type", rclpy.Parameter.Type.STRING),
+        ("input.path", rclpy.Parameter.Type.STRING)
+    ])
+
+    node.declare_parameters("", [
+        ("output.type", rclpy.Parameter.Type.STRING),
+        ("output.path", rclpy.Parameter.Type.STRING)
+    ])
+
+    node.declare_parameters("", [
+        ("config.coords.metric", rclpy.Parameter.Type.STRING),
+        ("config.coords.criterion", rclpy.Parameter.Type.STRING),
+        ("config.coords.criterion_args", rclpy.Parameter.Type.DOUBLE_ARRAY),
+        ("config.features.metric", rclpy.Parameter.Type.STRING),
+        ("config.features.criterion", rclpy.Parameter.Type.STRING),
+        ("config.features.criterion_args", rclpy.Parameter.Type.DOUBLE_ARRAY)
+    ])
+
+    size = node.get_parameter("size").value
+    input_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("input").items()))
+    output_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("output").items()))
+    config = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("config").items()))
+
+    if output_params["type"] != "Plots":
+        raise NotImplementedError("Supported outputs only include 'Plots'")
+
+    frontend_wrapped = astronet_frontends.factory.instance(input_params, "test", size)
     frontend = AsyncFrontend(frontend_wrapped, AsyncFrontend.Modes.NO_WAIT)
     frontend.start()
 
+    benchmarker = Benchmarker(frontend, size, config)
+
     try:
-        count = 0
-
-        while count < size:
-            data = frontend.receive(blocking=True)
-            (c1, c2, f1, f2) = (data.expected_kps[:, 0:2], data.actual_kps, data.expected_features, data.actual_features)
-
-            true_distance = torch.cdist(c1.float(), c2.float())
-            predicted_distance = 
-            
-            epsilon = 8
-            s = torch.zeros_like(true_distance)
-            s[true_distance < epsilon] = 1
-            
-            if len(true_distance) > 0 and len(predicted_distance) > 0 and torch.count_nonzero(s) > 0:
-                losses.append(self.loss(true_distance, predicted_distance))
-                tp.append((s * predicted_distance).sum()/torch.count_nonzero(s))
-                tn.append(((1 - s) * (1 - predicted_distance)).sum()/torch.count_nonzero((1 - s)))
-                    
-            avg_loss = torch.tensor(losses).mean()
-            avg_tp = torch.tensor(tp).mean()
-            avg_tn = torch.tensor(tn).mean()
-
-
-            count += 1
-            
+        benchmarker.loop()
         rclpy.shutdown()
     except KeyboardInterrupt:
         pass
