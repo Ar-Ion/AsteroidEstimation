@@ -6,20 +6,20 @@ from coffee_nn.trainer import Trainer
 def main(args=None):
     rclpy.init(args=args)
     
-    node = rclpy.create_node("coffee_nn_node")
+    node = rclpy.create_node("coffee_nn_train_node")
     
-    node.declare_parameter("train_size", 32768)
-    node.declare_parameter("validate_size", 4096)
-    node.declare_parameter("iter_ratio", 64)
+    node.declare_parameter("train_size", rclpy.Parameter.Type.INTEGER)
+    node.declare_parameter("validate_size", rclpy.Parameter.Type.INTEGER)
+    node.declare_parameter("iter_ratio", rclpy.Parameter.Type.INTEGER)
 
-    node.declare_parameters("input", [
-        ("type", "DriveClientFrontend"),
-        ("path", "/home/arion/AsteroidMotionDataset")
+    node.declare_parameters("", [
+        ("input.type", rclpy.Parameter.Type.STRING),
+        ("input.path", rclpy.Parameter.Type.STRING)
     ])
     
-    node.declare_parameters("output", [
-        ("type", "PTH"),
-        ("path", "/home/arion/AsteroidModel.pth")
+    node.declare_parameters("", [
+        ("output.model_type", rclpy.Parameter.Type.STRING),
+        ("output.model_path", rclpy.Parameter.Type.STRING)
     ])
     
     train_size = node.get_parameter("train_size").value

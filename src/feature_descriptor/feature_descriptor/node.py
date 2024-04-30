@@ -1,7 +1,7 @@
 import rclpy
 
-import astronet_frontends
-import feature_descriptor.backends
+import astronet_frontends.factory
+import feature_descriptor.backends.factory
 from astronet_frontends import AsyncFrontend
 
 def main(args=None):
@@ -9,23 +9,25 @@ def main(args=None):
     
     node = rclpy.create_node("feature_descriptor_node")
     
-    node.declare_parameter("size", 8192)
-    node.declare_parameter("mode", "validate")
+    node.declare_parameter("size", rclpy.Parameter.Type.INTEGER)
+    node.declare_parameter("mode", rclpy.Parameter.Type.STRING)
 
-    node.declare_parameters("input", [
-        ("type", "DriveClientFrontend"),
-        ("path", "/home/arion/AsteroidImageDataset")
+    node.declare_parameters("", [
+        ("input.type", rclpy.Parameter.Type.STRING),
+        ("input.path", rclpy.Parameter.Type.STRING)
     ])
     
-    node.declare_parameters("output", [
-        ("type", "DriveServerFrontend"),
-        ("path", "/home/arion/AsteroidFeatureDataset")
+    node.declare_parameters("", [
+        ("output.type", rclpy.Parameter.Type.STRING),
+        ("output.path", rclpy.Parameter.Type.STRING)
     ])
 
-    node.declare_parameters("backend", [
-        ("type", "COFFEE_Backend")
+    node.declare_parameters("", [
+        ("backend.type", rclpy.Parameter.Type.STRING),
+        ("backend.model_type", rclpy.Parameter.Type.STRING),
+        ("backend.model_path", rclpy.Parameter.Type.STRING)
     ])
-    
+
     size = node.get_parameter("size").value
     mode = node.get_parameter("mode").value
     input_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("input").items()))
@@ -41,7 +43,7 @@ def main(args=None):
     client.start()
     server.start()
     
-    backend = backends.factory.instance()
+    backend = feature_descriptor.backends.factory.instance(backend_params, client, server, size)
 
     try:
         backend.loop()

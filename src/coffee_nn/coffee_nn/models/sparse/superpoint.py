@@ -13,7 +13,7 @@ class SuperPoint(ME.MinkowskiNetwork):
         self._conv_kernel = ME.KernelGenerator(
             kernel_size=3,
             stride=1,
-            dilation=3,
+            dilation=1,
             region_type=ME.RegionType.HYPER_CUBE,
             dimension=D
         )
@@ -29,7 +29,7 @@ class SuperPoint(ME.MinkowskiNetwork):
         self._up_kernel = ME.KernelGenerator(
             kernel_size=3,
             stride=1,
-            dilation=3,
+            dilation=1,
             region_type=ME.RegionType.HYPER_CUBE,
             dimension=D
         )
@@ -47,30 +47,36 @@ class SuperPoint(ME.MinkowskiNetwork):
         self.conv3c = self.create_mapping_conv(256, 256)
 
         self.conv4 = self.create_upsampling_conv(256, 256)
-        self.conv5 = self.create_upsampling_conv(256, 256)
-        self.conv6 = self.create_upsampling_conv(256, 256)
+        self.conv5 = self.create_upsampling_conv(256+256, 256+256)
+        self.conv6 = self.create_upsampling_conv(256+256+128, 256+256+128)
 
         self.interp = ME.MinkowskiInterpolation()
 
     def forward(self, x):
         out = self.conv0(x)
-        out = self.conv1a(out)
-        out = self.conv1b(out)
-        out = self.conv2a(out)
-        out = self.conv2b(out)
-        out = self.conv3a(out)
-        out = self.conv3b(out)
+        out_s1 = self.conv1a(out)
+        out = self.conv1b(out_s1)
+        out_s2 = self.conv2a(out)
+        out = self.conv2b(out_s2)
+        out_s4 = self.conv3a(out)
+        out = self.conv3b(out_s4)
         out = self.conv3c(out)
+        
         out = self.conv4(out)
+        out = ME.cat(out, out_s4)
+        
         out = self.conv5(out)
+        out = ME.cat(out, out_s2)
+        
         out = self.conv6(out)
+        out = ME.cat(out, out_s1)
 
-        return out
+        return MF.normalize(MF.relu(out), dim=1)
 
-        out_coords = x.coordinates
-        out_features = self.interp(out, out_coords.to(torch.float))
+        #out_coords = x.coordinates
+        #out_features = self.interp(out, out_coords.to(torch.float))
                 
-        return ME.SparseTensor(out_features, out_coords)
+        #return ME.SparseTensor(out_features, out_coords)
 
     def create_convs(self, n, count):
         convs = []

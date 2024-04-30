@@ -4,15 +4,14 @@ from PIL import Image
 import numpy as np
 
 class Visualizer:
-    def __init__(self, image_size, num_dimensions):
+    def __init__(self, image_size):
         self._image_size = image_size
-        self._num_dimensions = num_dimensions
         self._count = 0
     
     def plot(self, coords, features):
         img = np.zeros((self._image_size, self._image_size, 3))
 
-        mapper = np.linspace(0, 1, self._num_dimensions)
+        mapper = np.linspace(0, 1, features.shape[1])
         hue = np.dot(features, mapper)
         value = np.linalg.norm(features, axis=1)
 
