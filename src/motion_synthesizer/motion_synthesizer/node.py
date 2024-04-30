@@ -8,17 +8,17 @@ def main(args=None):
     
     node = rclpy.create_node("motion_synthesizer_node")
     
-    node.declare_parameter("size", 65536)
-    node.declare_parameter("mode", "test")
+    node.declare_parameter("size", rclpy.Parameter.Type.INTEGER)
+    node.declare_parameter("mode", rclpy.Parameter.Type.STRING)
 
-    node.declare_parameters("input", [
-        ("type", "DriveClientFrontend"),
-        ("path", "/home/arion/AsteroidFeatureDataset")
+    node.declare_parameters("", [
+        ("input.type", rclpy.Parameter.Type.STRING),
+        ("input.path", rclpy.Parameter.Type.STRING)
     ])
     
-    node.declare_parameters("output", [
-        ("type", "DriveServerFrontend"),
-        ("path", "/home/arion/AsteroidMotionDataset")
+    node.declare_parameters("", [
+        ("output.type", rclpy.Parameter.Type.STRING),
+        ("output.path", rclpy.Parameter.Type.STRING)
     ])
     
     size = node.get_parameter("size").value

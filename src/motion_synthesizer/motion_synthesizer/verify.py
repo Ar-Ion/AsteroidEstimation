@@ -13,9 +13,9 @@ def main(args=None):
     node.declare_parameter("size", 64)
     node.declare_parameter("mode", "train")
 
-    node.declare_parameters("input", [
-        ("type", "DriveClientFrontend"),
-        ("path", "/home/arion/AsteroidMotionDataset")
+    node.declare_parameters("", [
+        ("input.type", "DriveClientFrontend"),
+        ("input.path", "/home/arion/AsteroidMotionDataset")
     ])
     
     size = node.get_parameter("size").value
