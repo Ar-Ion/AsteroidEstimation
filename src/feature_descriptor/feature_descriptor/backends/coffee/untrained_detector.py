@@ -7,13 +7,13 @@ from matplotlib import pyplot as plt
 from .. import Backend
 
 # Celestial Occlusion Fast FEature Extractor
-class COFFEE_Backend(Backend):
+class UntrainedCOFFEEBackend(Backend):
 
-    def __init__(self, client, server, size):
+    def __init__(self, client, server, size, backend_params):
 
-        super().__init__(client, server, size)
+        super().__init__(client, server, size, backend_params)
         
-        module_dir = get_package_share_directory("feature_detector")
+        module_dir = get_package_share_directory("feature_descriptor")
         cuda_module = os.path.join(module_dir, "cuda_modules", "sparsify_cuda.cpp")
         cuda_kernel = os.path.join(module_dir, "cuda_kernels", "sparsify_cuda_kernel.cu")
          

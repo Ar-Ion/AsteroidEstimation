@@ -1,3 +1,2 @@
-import torch
-
-from .detector import COFFEE_Backend
+from .untrained_detector import UntrainedCOFFEEBackend
+from .trained_detector import TrainedCOFFEEBackend
