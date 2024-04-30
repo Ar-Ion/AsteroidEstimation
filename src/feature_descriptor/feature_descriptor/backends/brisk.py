@@ -6,7 +6,8 @@ from . import Backend
 
 class BRISKBackend(Backend):
 
-    def __init__(self):
+    def __init__(self, client, server, size, backend_params):
+        super().__init__(client, server, size, backend_params)
         self._extractor = cv2.BRISK_create()
 
     def detect_features(self, image):

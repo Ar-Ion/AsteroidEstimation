@@ -4,7 +4,7 @@ from astronet_msgs import FeatureData
 
 class Backend(ABC):
 
-    def __init__(self, client, server, size):
+    def __init__(self, client, server, size, backend_params):
         self._client = client
         self._server = server
         self._size = size
@@ -29,7 +29,7 @@ class Backend(ABC):
 
             self._count += 1
             
-            if self._count % 1000 == 0:
+            if self._count % 100 == 0:
                 print("Generated " + f"{self._count/self._size:.0%}" + " of synthetic feature data")
 
         print("All synthetic data has been generated")
