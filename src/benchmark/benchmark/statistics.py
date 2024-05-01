@@ -47,13 +47,22 @@ class GreaterThan(MatchCriterion):
         match_matrix = (dist_matrix > self._epsilon)
         return match_matrix.to(dtype=torch.float32)
 
-class Ratio(MatchCriterion):
+class MaxRatio(MatchCriterion):
     def __init__(self, ratio):
         self._ratio = ratio
     
     def apply(self, dist_matrix):
         top = torch.topk(dist_matrix, 2, dim=0)
         match_matrix = dist_matrix > self._ratio*top.values[1]
+        return match_matrix.to(dtype=torch.float32)
+    
+class MinRatio(MatchCriterion):
+    def __init__(self, ratio):
+        self._ratio = ratio
+    
+    def apply(self, dist_matrix):
+        top = torch.topk(dist_matrix, 2, dim=0, largest=False)
+        match_matrix = dist_matrix < self._ratio*top.values[1]
         return match_matrix.to(dtype=torch.float32)
     
 class PassThrough(MatchCriterion):
@@ -73,6 +82,8 @@ class Matcher:
 
 class Statistics:
     def __init__(self, true_matches, pred_matches):
+        self._true_count = true_matches.sum()/2 # Note that every match is counted twice, hence the division
+        self._positive_count = pred_matches.sum()/2
         self._tp = (true_matches * pred_matches).mean()
         self._tn = ((1-true_matches) * (1-pred_matches)).mean()
         self._fp = ((1-true_matches) * pred_matches).mean()
@@ -89,6 +100,12 @@ class Statistics:
     
     def false_negatives(self):
         return self._fn
+    
+    def true_count(self):
+        return self._true_count
+
+    def positive_count(self):
+        return self._positive_count
     
     def accuracy(self):
         return self._tp + self._tn
