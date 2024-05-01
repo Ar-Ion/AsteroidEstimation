@@ -1,4 +1,5 @@
 import rclpy
+from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 
 import astronet_frontends.factory
 from astronet_frontends import AsyncFrontend
@@ -9,8 +10,8 @@ def main(args=None):
     rclpy.init(args=args)
 
     node = rclpy.create_node("benchmark_node")
-
     node.declare_parameter("size", rclpy.Parameter.Type.INTEGER)
+    node.declare_parameter("mode", rclpy.Parameter.Type.STRING)
 
     node.declare_parameters("", [
         ("input.type", rclpy.Parameter.Type.STRING),
@@ -21,7 +22,7 @@ def main(args=None):
         ("output.type", rclpy.Parameter.Type.STRING),
         ("output.path", rclpy.Parameter.Type.STRING)
     ])
-
+    
     node.declare_parameters("", [
         ("config.coords.metric", rclpy.Parameter.Type.STRING),
         ("config.coords.criterion", rclpy.Parameter.Type.STRING),
@@ -32,6 +33,7 @@ def main(args=None):
     ])
 
     size = node.get_parameter("size").value
+    mode = node.get_parameter("mode").value
     input_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("input").items()))
     output_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("output").items()))
     config = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("config").items()))
@@ -39,7 +41,7 @@ def main(args=None):
     if output_params["type"] != "Plots":
         raise NotImplementedError("Supported outputs only include 'Plots'")
 
-    frontend_wrapped = astronet_frontends.factory.instance(input_params, "test", size)
+    frontend_wrapped = astronet_frontends.factory.instance(input_params, mode, size)
     frontend = AsyncFrontend(frontend_wrapped, AsyncFrontend.Modes.NO_WAIT)
     frontend.start()
 
