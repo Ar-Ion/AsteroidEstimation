@@ -1,5 +1,4 @@
 import rclpy
-import numpy as np
 import torch
 from matplotlib import pyplot as plt
 
@@ -38,7 +37,7 @@ def main(args=None):
 
             distance_matrix = torch.cdist(c1.float(), c2.float())
             
-            matches = np.count_nonzero(distance_matrix < 1)
+            matches = torch.count_nonzero(distance_matrix < 1)
             sizes = torch.tensor((distance_matrix.shape[0], distance_matrix.shape[1]))
             ratio = matches/sizes.min()
             
@@ -70,11 +69,11 @@ def main(args=None):
                 print("Verified " + f"{count/size:.0%}" + " of synthetic motion data")
                                                 
         plt.figure()
-        plt.hist(np.hstack(dist_stats), bins="auto")
+        plt.hist(torch.hstack(dist_stats), bins="auto")
         plt.show()
                 
-        print(f"Mean: {np.mean(features_means)}")
-        print(f"Std: {np.std(features_stds)}")
+        print(f"Mean: {torch.mean(features_means)}")
+        print(f"Std: {torch.std(features_stds)}")
         
         rclpy.shutdown()
     except KeyboardInterrupt:

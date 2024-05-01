@@ -17,10 +17,14 @@ class Backend(ABC):
             camera_data = data.robot_data.cam_data[0]
             
             (coords, features) = self.detect_features(camera_data.image)
-            depth_value = camera_data.depth[coords[:, 0], coords[:, 1]]
-            cam_coords = np.hstack([coords, depth_value[:, None]])
             
-            features_data = FeatureData.RobotData.SparseCameraData(camera_data.pose, camera_data.k, cam_coords, features)
+            coords_cpu = coords.cpu()
+            features_cpu = features.cpu()
+            
+            depth_value = camera_data.depth[coords_cpu[:, 0], coords_cpu[:, 1]]
+            cam_coords = np.hstack([coords_cpu, depth_value[:, None]])
+            
+            features_data = FeatureData.RobotData.SparseCameraData(camera_data.pose, camera_data.k, cam_coords, features_cpu)
             robot_data = FeatureData.RobotData([features_data])
             env_data = FeatureData.EnvironmentData(data.env_data.pose)
             data_out = FeatureData(env_data, robot_data)

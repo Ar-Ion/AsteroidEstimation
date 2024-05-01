@@ -44,9 +44,8 @@ class UntrainedCOFFEEBackend(Backend):
         # We need to COO representation and not the CSR
         torch_coo_repr = angle_repr.to_sparse_coo()
 
-        # Convert back to CPU tensor
-        coords = torch_coo_repr.indices().cpu()
-        features = torch_coo_repr.values().cpu()
+        coords = torch_coo_repr.indices().to(dtype=torch.int)
+        features = torch_coo_repr.values()
         
         # Filter out negative angles
         coords = coords[:, features > 0]

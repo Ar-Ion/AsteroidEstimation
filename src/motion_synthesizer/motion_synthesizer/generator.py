@@ -1,7 +1,6 @@
 import numpy as np
 import quaternion
 import torch
-from matplotlib import pyplot as plt
 
 from astronet_frontends import DriveClientFrontend
 from camera_utils import Extrinsics, Intrinsics, CameraProjection

@@ -1,6 +1,5 @@
 import cv2
-import numpy as np
-from matplotlib import pyplot as plt
+import torch
 
 from . import Backend
 
@@ -12,4 +11,4 @@ class SIFTBackend(Backend):
 
     def detect_features(self, image):
         (kp, dess) = self._extractor.detectAndCompute(image, None)
-        return (np.array(list(map(lambda x: x.pt, kp)), dtype=np.uint16), dess)
+        return (torch.tensor(list(map(lambda x: (x.pt[1], x.pt[0]), kp)), dtype=torch.int), torch.from_numpy(dess))

@@ -21,7 +21,7 @@ class Trainer:
         # Hyperparameters
         self._batch_size = 16
         self._max_epochs = 500
-        self._epsilon = 16/1024
+        self._epsilon = 16
         lr = 0.001
         momentum = 0.9
         weight_decay=0.0
@@ -54,8 +54,8 @@ class Trainer:
         self._model = model_wrapped.to(self._device)
         
         # Loss function metrics
-        self._coords_matcher = Matcher(L2, LowerThanCriterion(self._epsilon))
-        self._features_matcher = Matcher(Cosine, GreaterThanCriterion(0.3))
+        self._coords_matcher = Matcher(L2, LowerThan(self._epsilon))
+        self._features_matcher = Matcher(Cosine, GreaterThan(0.3))
         
         # Optimizer instantiation
         self._optimizer = torch.optim.Adam(self._model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -84,7 +84,7 @@ class Trainer:
     # Main loop. Called by the ROS node. Supposedly trains the neural network.
     def loop(self):
         
-        best_recall = 0
+        best_f1 = 0
         
         for epoch in range(self._max_epochs):
             # Training
@@ -151,9 +151,10 @@ class Trainer:
             self._visualizer.plot(c2.detach().cpu().numpy(), f2.detach().cpu().numpy())
             
             # Saving current weights to provided file
-            if avg_val_recall > best_recall:
+            if avg_val_f1 > best_f1:
                 torch.save(self._model.state_dict(), self._pth_path)
-                best_recall = avg_val_recall
+                print("This is the best model so far")
+                best_f1 = avg_val_f1
                 
             
         wandb.finish()

@@ -1,5 +1,8 @@
 import torch
 import MinkowskiEngine as ME
+import numpy as np
+from matplotlib import colors
+from matplotlib import pyplot as plt
 
 from coffee_nn.models.sparse import SuperPoint
 from . import UntrainedCOFFEEBackend
@@ -22,10 +25,35 @@ class TrainedCOFFEEBackend(UntrainedCOFFEEBackend):
     
     def detect_features(self, image):
         (in_coords, in_features) = super().detect_features(image)
-        input = ME.SparseTensor(in_features[:, None], in_coords[None, :]) # Add empty batch dimension
+        
+        mean = 1.471
+        std = 0.0452
+        transform = lambda x: (x - mean)/std
 
-        output = self._model.forward(input)
-                    
-        return (output.coordinates, output.features)
+        compatible_features = transform(in_features)[:, None]
+        compatible_coords = torch.hstack((torch.zeros_like(compatible_features, dtype=torch.int), in_coords))
+
+        input = ME.SparseTensor(compatible_features, compatible_coords) # Add empty batch dimension
+
+        with torch.set_grad_enabled(False):
+            output = self._model.forward(input)
+
+        out_coords = output.coordinates[:, 1:3].cpu()
+        out_features = output.features.cpu()
+
+        # img = np.zeros((1024, 1024, 3))
+
+        # mapper = np.linspace(0, 1, out_features.shape[1])
+        # hue = np.dot(out_features, mapper)
+        # value = np.linalg.norm(out_features, axis=1)
+
+        # hsv = np.array((hue, np.ones_like(hue), value))
+        
+        # img[out_coords[:, 0], out_coords[:, 1]] = colors.hsv_to_rgb(hsv.T)
+
+        # plt.imshow(img)
+        # plt.show()
+                                
+        return (out_coords, out_features)
         
         
