@@ -17,8 +17,7 @@ class Visualizer:
 
         hsv = np.array((hue, np.ones_like(hue), value))
         
-        indices = (self._image_size*coords).astype(dtype=np.int32)
-        img[indices[:, 0], indices[:, 1]] = colors.hsv_to_rgb(hsv.T)
+        img[coords[:, 0], coords[:, 1]] = colors.hsv_to_rgb(hsv.T)
         
         image = Image.fromarray((img * 255).astype(np.uint8))
         image.save(f"/home/arion/AsteroidModelVisualization/{self._count}.png")
