@@ -29,7 +29,7 @@ trainer:
       model_path: "/home/arion/AsteroidModel.pth"
 
 eval_descriptor:
-  ros__parameters: 
+  ros__parameters:     
     input:
       type: "DriveClientFrontend"
       path: "/home/arion/AsteroidImageDataset"

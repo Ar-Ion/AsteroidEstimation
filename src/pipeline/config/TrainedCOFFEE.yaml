@@ -9,4 +9,12 @@ eval_benchmarker:
       features:
         metric: "Cosine"
         criterion: "GreaterThan"
-        criterion_args: [0.3]
+        criterion_args: [0.4]
+
+# [node-1] Average accuracy: 0.9934656620025635
+# [node-1] Average precision: 0.4002126157283783
+# [node-1] Average recall: 0.4060477316379547
+# [node-1] Average F1 score: 0.3999486565589905
+# [node-1] Average feature count: 4095.796875
+# [node-1] Average true count: 47922.875
+# [node-1] Average positive count: 47213.359375
