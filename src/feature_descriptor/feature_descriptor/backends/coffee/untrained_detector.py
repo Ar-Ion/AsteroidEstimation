@@ -66,6 +66,6 @@ class UntrainedCOFFEEBackend(Backend):
         #plt.ylim(1024, 0)
         #plt.show()
         
-        return (coords.T, features)
+        return (coords.T, features[:, None])
         
         

@@ -5,7 +5,7 @@ import MinkowskiEngine.MinkowskiFunctional as MF
 
 class SuperPoint(ME.MinkowskiNetwork):
 
-    def __init__(self, in_feat=1, out_feat=256, D=2):
+    def __init__(self, D=2):
         super(SuperPoint, self).__init__(D)
 
         self._D = D

@@ -34,9 +34,13 @@ class DriveClientFrontend(Frontend):
     def on_tick(self):
         if self._current < self.size:
             id = self._indices[self._current]
-            filename = os.path.join(self.source, self.mode, str(id).zfill(6) + ".pickle")
+            data = self.get(id)
             self._current += 1
-            
-            with open(filename, 'rb') as handle:
-                data = pickle.load(handle)
-                self.on_receive(data)
+            self.on_receive(data)
+
+    def get(self, id):
+        filename = os.path.join(self.source, self.mode, str(id).zfill(6) + ".pickle")
+        
+        with open(filename, 'rb') as handle:
+            data = pickle.load(handle)
+            return data

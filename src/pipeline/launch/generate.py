@@ -9,7 +9,8 @@ from launch.substitutions import LaunchConfiguration
 def generate_launch_description():
     run_params = {
         "size": LaunchConfiguration("size"),
-        "mode": LaunchConfiguration("mode")
+        "mode": LaunchConfiguration("mode"),
+        "backend.type": "UntrainedCOFFEE"
     }
 
     dataset_params = os.path.join(get_package_share_directory('pipeline'), 'config', 'pipeline.yaml')
@@ -38,7 +39,7 @@ def generate_launch_description():
         ]
     )
     
-    create_verifier = OpaqueFunction(function=create_verifier_node, args=[run_params])
+    create_verifier = OpaqueFunction(function=create_verifier_node, args=[run_params, dataset_params])
 
     return LaunchDescription([
         DeclareLaunchArgument("mode"),
@@ -67,8 +68,8 @@ def create_verifier_node(context, run_params, dataset_params):
     
     verifier = Node(
         package="motion_synthesizer",
-        executable="node",
-        name="verify",
+        executable="verify",
+        name="gen_verifier",
         output="screen",
         emulate_tty=True,
         parameters=[

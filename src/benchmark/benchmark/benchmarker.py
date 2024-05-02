@@ -1,5 +1,6 @@
 import torch
 from .statistics import *
+from astronet_msgs import BatchedMotionData
 
 class Benchmarker:
     def __init__(self, frontend, size, config):
@@ -34,21 +35,21 @@ class Benchmarker:
         stats = []
         feature_count = 0
 
-        with torch.amp.autocast(device_type="cuda", dtype=torch.float32):
-            while count < self._size:
-                data = self._frontend.receive(blocking=True)
-                (c1, c2, f1, f2) = (data.expected_kps, data.actual_kps, data.expected_features, data.actual_features)
+        while count < self._size:
+            data = self._frontend.receive(blocking=True)
+            batch = BatchedMotionData.from_list([data]).to(self._device)
 
-                true_dists, true_matches = self._coords_matcher.match(c1.to(self._device), c2.to(self._device))
-                pred_dists, pred_matches = self._features_matcher.match(f1.to(self._device), f2.to(self._device))
-                
-                stats.append(Statistics(true_matches, pred_matches))            
-                feature_count += 0.5*(f1.size(0) + f2.size(0))
+            true_dists, true_matches = self._coords_matcher.match(batch.proj_kps, batch.next_kps)
+            pred_dists, pred_matches = self._features_matcher.match(batch.prev_features, batch.next_features)
+            
+            self.loss(true_dists, true_matches, pred_dists, pred_matches)
+            stats.append(Statistics(true_dists, true_matches, pred_dists, pred_matches))            
+            feature_count += 0.5*(batch.prev_features.size(0) + batch.next_features.size(0))
+            
+            count += 1
 
-                count += 1
-
-                if count % 100 == 0:
-                    print("Computed statistics for " + f"{count/self._size:.0%}" + " of the described data")
+            if count % 100 == 0:
+                print("Computed statistics for " + f"{count/self._size:.0%}" + " of the described data")
 
         avg_accuracy = torch.tensor(list(map(lambda x: x.accuracy(), stats))).mean()
         avg_precision = torch.tensor(list(map(lambda x: x.precision(), stats))).mean()
@@ -57,7 +58,8 @@ class Benchmarker:
         avg_feature_count = feature_count / self._size
         avg_true_count = torch.tensor(list(map(lambda x: x.true_count(), stats))).mean()
         avg_positive_count = torch.tensor(list(map(lambda x: x.positive_count(), stats))).mean()
-            
+        avg_pixel_error = torch.tensor(list(map(lambda x: x.pixel_error(), stats))).mean()
+
         print(f"Average accuracy: {avg_accuracy}")
         print(f"Average precision: {avg_precision}")
         print(f"Average recall: {avg_recall}")
@@ -65,3 +67,33 @@ class Benchmarker:
         print(f"Average feature count: {avg_feature_count}")
         print(f"Average true count: {avg_true_count}")
         print(f"Average positive count: {avg_positive_count}")
+        print(f"Average pixel location error: {avg_pixel_error}")
+
+    def loss(self, true_dists, true_matches, pred_dists, pred_matches):      
+        
+        # Add dustbin to allow unmatched feature
+        
+        #pred_dists = torch.nn.functional.normalize(pred_dists, dim=0)
+        
+        weight = 1 # This parameter has little effect
+        margin = 0.05
+        
+        # Ground truth
+        matches = true_matches
+        diffs = 1-true_matches
+
+        # Hinge loss
+        fn_loss = matches * torch.maximum(torch.tensor(0), 1 - pred_dists)
+        fp_loss = diffs * torch.maximum(torch.tensor(0), pred_dists - margin)
+        
+        # Average
+        fn_loss_avg = fn_loss.sum()
+        fp_loss_avg = fp_loss.sum()
+
+        print(fn_loss_avg)
+        print(fp_loss_avg)
+        
+        # Combine
+        hinge_loss = weight*fn_loss_avg + fp_loss_avg
+        
+        return hinge_loss.sum()

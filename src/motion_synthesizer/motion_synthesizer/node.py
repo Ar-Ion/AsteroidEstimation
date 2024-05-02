@@ -25,7 +25,7 @@ def main(args=None):
     mode = node.get_parameter("mode").value
     input_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("input").items()))
     output_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("output").items()))
-    
+
     client_wrapped = factory.instance(input_params, mode, size)
     server_wrapped = factory.instance(output_params, mode, size/2) # Each output motion requires two input images
     

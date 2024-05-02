@@ -4,17 +4,20 @@ eval_benchmarker:
       coords:
         metric: "L2"
         criterion: "LowerThan"
-        criterion_args: [16.0]
+        criterion_args: [1.41]
 
       features:
         metric: "Cosine"
-        criterion: "GreaterThan"
-        criterion_args: [0.4]
+        criterion: "MaxRatio"
+        criterion_args: [1.0]
 
-# [node-1] Average accuracy: 0.9934656620025635
-# [node-1] Average precision: 0.4002126157283783
-# [node-1] Average recall: 0.4060477316379547
-# [node-1] Average F1 score: 0.3999486565589905
+# For GreaterThan > criterion_args: [0.82]
+
+# [node-1] Average accuracy: 0.9996296763420105
+# [node-1] Average precision: 0.02971714921295643
+# [node-1] Average recall: 0.020412838086485863
+# [node-1] Average F1 score: 0.02381930686533451
 # [node-1] Average feature count: 4095.796875
-# [node-1] Average true count: 47922.875
-# [node-1] Average positive count: 47213.359375
+# [node-1] Average true count: 1812.546875
+# [node-1] Average positive count: 1378.625
+

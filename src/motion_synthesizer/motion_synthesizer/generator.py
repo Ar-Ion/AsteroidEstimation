@@ -14,6 +14,11 @@ class MotionGenerator:
         self._output_size = output_size
         self._count = 0
 
+        # CUDA configuration
+        self._device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        torch.set_default_device(self._device)
+        print("Using compute module " + str(self._device))
+
     def get_projection(self, data):
         env_pose = data.env_data.pose
         cam_pose = data.robot_data.cam_data[0].pose
@@ -43,38 +48,40 @@ class MotionGenerator:
             proj1 = self.get_projection(data1)
             proj2 = self.get_projection(data2)
             
-            distance1 = torch.Tensor(data1.robot_data.cam_data[0].pose.trans - data1.env_data.pose.trans)
-            distance2 = torch.Tensor(data2.robot_data.cam_data[0].pose.trans - data2.env_data.pose.trans)
+            distance1 = torch.Tensor(data1.robot_data.cam_data[0].pose.trans - data1.env_data.pose.trans).to(self._device)
+            distance2 = torch.Tensor(data2.robot_data.cam_data[0].pose.trans - data2.env_data.pose.trans).to(self._device)
                         
-            data1_coords = torch.Tensor(data1.robot_data.cam_data[0].coords)
-            data1_features = torch.Tensor(data1.robot_data.cam_data[0].features)
-            data2_coords = torch.Tensor(data2.robot_data.cam_data[0].coords)
-            data2_features = torch.Tensor(data2.robot_data.cam_data[0].features)
+            data1_coords = torch.Tensor(data1.robot_data.cam_data[0].coords).to(self._device)
+            data1_features = torch.Tensor(data1.robot_data.cam_data[0].features).to(self._device)
+            data2_coords = torch.Tensor(data2.robot_data.cam_data[0].coords).to(self._device)
+            data2_features = torch.Tensor(data2.robot_data.cam_data[0].features).to(self._device)
             
             env1_coords = proj1.camera2object(data1_coords)
             reproj1_coords = proj2.object2camera(env1_coords)
 
             non_nan_filter = ~torch.any(reproj1_coords.isnan(), dim=1)
             visible_filter = reproj1_coords[:, 2] < torch.norm(distance2)
-            
-            expected_kps = reproj1_coords[non_nan_filter & visible_filter, 0:2]
-            expected_features = data1_features[non_nan_filter & visible_filter]
-            actual_kps = data2_coords[:, 0:2]
-            actual_features = data2_features
+            combined_filter = non_nan_filter & visible_filter
+
+            prev_kps = data1_coords[combined_filter, 0:2].to(dtype=torch.int).cpu()
+            proj_kps = reproj1_coords[combined_filter, 0:2].to(dtype=torch.int).cpu()
+            next_kps = data2_coords[:, 0:2].to(dtype=torch.int).cpu()
+            prev_features = data1_features[combined_filter].cpu()
+            next_features = data2_features.cpu()
                         
             # plt.figure()
-            # plt.scatter(actual_kps[:, 1], actual_kps[:, 0], s=0.1)
-            # plt.scatter(data1_coords[:, 1], data1_coords[:, 0], s=0.1)
-            # plt.scatter(expected_kps[:, 1], expected_kps[:, 0], s=0.1)
+            # plt.scatter(prev_kps[:, 1], prev_kps[:, 0], s=0.1)
+            # plt.scatter(proj_kps[:, 1], proj_kps[:, 0], s=0.1)
+            # plt.scatter(next_kps[:, 1], next_kps[:, 0], s=0.1)
             # plt.xlim(0, 1024)
             # plt.ylim(0, 1024)
             # plt.show()
             
-            data_out = MotionData(expected_kps, actual_kps, expected_features, actual_features)
+            data_out = MotionData(prev_kps, proj_kps, next_kps, prev_features, next_features)
             
             self._server.transmit(data_out)
 
             self._count += 1
 
-            if self._count % 1000 == 0:
+            if self._count % 100 == 0:
                 print("Generated " + f"{self._count/self._output_size:.0%}" + " of synthetic motion data")

@@ -81,13 +81,14 @@ class Matcher:
         return dist_matrix, match_matrix
 
 class Statistics:
-    def __init__(self, true_matches, pred_matches):
+    def __init__(self, true_dists, true_matches, pred_dists, pred_matches):
         self._true_count = true_matches.sum()/2 # Note that every match is counted twice, hence the division
         self._positive_count = pred_matches.sum()/2
         self._tp = (true_matches * pred_matches).mean()
         self._tn = ((1-true_matches) * (1-pred_matches)).mean()
         self._fp = ((1-true_matches) * pred_matches).mean()
         self._fn = (true_matches * (1-pred_matches)).mean()
+        self._dist = (pred_matches * true_dists).abs().sum() / pred_matches.count_nonzero()
         
     def true_positives(self):
         return self._tp
@@ -115,6 +116,9 @@ class Statistics:
 
     def recall(self):
         return self._tp / (self._tp + self._fn)
+    
+    def pixel_error(self):
+        return self._dist
     
     def f1(self):
         precision = self.precision()

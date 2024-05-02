@@ -1,8 +1,7 @@
 import threading
-import torch
 from torch.utils.data import Dataset, DataLoader
-import MinkowskiEngine as ME
 from astronet_frontends import DriveClientFrontend
+from astronet_msgs import BatchedMotionData
 
 class AsteroidMotionDataset(Dataset):
     def __init__(self, frontend, size, transform=None):
@@ -25,37 +24,24 @@ class AsteroidMotionDataset(Dataset):
                 self._frontend.send_event(DriveClientFrontend.Events.RESET)
                 
         
-        expected_features = data.expected_features
-        actual_features = data.actual_features
+        prev_features = data.prev_features
+        next_features = data.next_features
         
         if self._transform:
-            expected_features = self._transform(expected_features)
-            actual_features = self._transform(actual_features)
+            prev_features = self._transform(prev_features)
+            next_features = self._transform(next_features)
             
-        return (data.expected_kps, data.actual_kps, expected_features, actual_features)
+        return data
                     
     def __len__(self):
         return self._size
-    
-    def _collate(data):
-        c1, c2, f1, f2 = list(zip(*data))
 
-        # Create batched coordinates for the SparseTensor input
-        bc1 = ME.utils.batched_coordinates(c1)
-        bc2 = ME.utils.batched_coordinates(c2)
-
-        # Concatenate all lists
-        bf1 = torch.concatenate(f1, 0)
-        bf2 = torch.concatenate(f2, 0)
-
-        return (bc1, bc2, bf1, bf2)
-    
     def DataLoader(dataset, batch_size, drop_last=False):
         return DataLoader(
             dataset, 
             batch_size=batch_size, 
             shuffle=False, 
             num_workers=1, 
-            collate_fn=AsteroidMotionDataset._collate,
+            collate_fn=BatchedMotionData.from_list,
             drop_last=drop_last
         )

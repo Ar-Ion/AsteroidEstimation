@@ -18,6 +18,12 @@ gen_synthesizer:
       type: "DriveServerFrontend"
       path: "/home/arion/AsteroidMotionDataset"
 
+gen_verifier:
+  ros__parameters:
+    input:
+      type: "DriveClientFrontend"
+      path: "/home/arion/AsteroidMotionDataset"
+
 trainer:
   ros__parameters:
     input:

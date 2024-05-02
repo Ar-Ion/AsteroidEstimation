@@ -9,12 +9,12 @@ def main(args=None):
 
     node = rclpy.create_node("motion_synthesizer_verification_node")
     
-    node.declare_parameter("size", 64)
-    node.declare_parameter("mode", "train")
+    node.declare_parameter("size", rclpy.Parameter.Type.INTEGER)
+    node.declare_parameter("mode", rclpy.Parameter.Type.STRING)
 
     node.declare_parameters("", [
-        ("input.type", "DriveClientFrontend"),
-        ("input.path", "/home/arion/AsteroidMotionDataset")
+        ("input.type", rclpy.Parameter.Type.STRING),
+        ("input.path", rclpy.Parameter.Type.STRING)
     ])
     
     size = node.get_parameter("size").value
@@ -31,17 +31,17 @@ def main(args=None):
         features_stds = []
 
         count = 0
+        
         while count < size:
             data = frontend.receive(blocking=True)
-            (c1, c2, f1, f2) = (data.expected_kps, data.actual_kps, data.expected_features, data.actual_features)
 
-            distance_matrix = torch.cdist(c1.float(), c2.float())
+            distance_matrix = torch.cdist(data.proj_kps.float(), data.next_kps.float())
             
-            matches = torch.count_nonzero(distance_matrix < 1)
+            matches = torch.count_nonzero(distance_matrix < torch.tensor(2).sqrt())
             sizes = torch.tensor((distance_matrix.shape[0], distance_matrix.shape[1]))
             ratio = matches/sizes.min()
             
-            if ratio < 0.2:
+            if ratio < 0.3:
                 print(f"The data at index {count} doesn't make sense")
 
             #plt.figure()
@@ -55,26 +55,26 @@ def main(args=None):
                 shortest_distance = distance_matrix.min(dim=0).values
                 dist_stats.append(shortest_distance)
             
-            if len(f1) > 1:                
-                features_means.append(f1.mean())
-                features_stds.append(f1.std())
+            if len(data.prev_features) > 1:                
+                features_means.append(data.prev_features.mean())
+                features_stds.append(data.prev_features.std())
                 
-            if len(f2) > 1:
-                features_means.append(f2.mean())
-                features_stds.append(f2.std())
+            if len(data.next_features) > 1:
+                features_means.append(data.next_features.mean())
+                features_stds.append(data.next_features.std())
                 
             count += 1
 
             if count % 100 == 0:
                 print("Verified " + f"{count/size:.0%}" + " of synthetic motion data")
                                                 
+        print(f"Mean: {torch.tensor(features_means).mean()}")
+        print(f"Std: {torch.tensor(features_stds).mean()}")
+        
         plt.figure()
         plt.hist(torch.hstack(dist_stats), bins="auto")
         plt.show()
-                
-        print(f"Mean: {torch.mean(features_means)}")
-        print(f"Std: {torch.std(features_stds)}")
-        
+
         rclpy.shutdown()
     except KeyboardInterrupt:
         pass

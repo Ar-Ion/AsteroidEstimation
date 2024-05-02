@@ -26,14 +26,13 @@ class TrainedCOFFEEBackend(UntrainedCOFFEEBackend):
     def detect_features(self, image):
         (in_coords, in_features) = super().detect_features(image)
         
-        mean = 1.471
-        std = 0.0452
-        transform = lambda x: (x - mean)/std
+        #mean = 1.471
+        #std = 0.0452
+        #transform = lambda x: (x - mean)/std
 
-        compatible_features = transform(in_features)[:, None]
-        compatible_coords = torch.hstack((torch.zeros_like(compatible_features, dtype=torch.int), in_coords))
+        compatible_coords = torch.hstack((torch.zeros_like(in_features, dtype=torch.int), in_coords))
 
-        input = ME.SparseTensor(compatible_features, compatible_coords) # Add empty batch dimension
+        input = ME.SparseTensor(in_features, compatible_coords) # Add empty batch dimension
 
         with torch.set_grad_enabled(False):
             output = self._model.forward(input)

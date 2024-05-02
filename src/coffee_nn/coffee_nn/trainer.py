@@ -6,6 +6,7 @@ import MinkowskiEngine as ME
 import wandb
 
 from benchmark.statistics import *
+from astronet_msgs import BatchedMotionData
 from .models.sparse import AutoEncoder, SuperPoint
 from .dataset import AsteroidMotionDataset
 from .visualizer import Visualizer
@@ -21,25 +22,28 @@ class Trainer:
         # Hyperparameters
         self._batch_size = 16
         self._max_epochs = 500
-        self._epsilon = 16
-        lr = 0.001
+        self._epsilon = torch.tensor(2).sqrt()
+        lr = 0.0001
         momentum = 0.9
         weight_decay=0.0
         
         # Normalization (comes from verify_dataset.py)
-        mean = 1.471
-        std = 0.0452
-        transform = lambda x: (x - mean)/std
+        #mean = 1.471
+        #std = 0.0452
+        #transform = lambda x: (x - mean)/std
         
         # Initialize datasets for training and validate
-        train_dataset = AsteroidMotionDataset(train_frontend, train_size, transform=transform)
-        validate_dataset = AsteroidMotionDataset(validate_frontend, validate_size, transform=transform)
+        self._train_frontend = train_frontend
+        self._validate_frontend = validate_frontend
+
+        train_dataset = AsteroidMotionDataset(train_frontend, train_size)
+        validate_dataset = AsteroidMotionDataset(validate_frontend, validate_size)
         
         self._train_dataloader = AsteroidMotionDataset.DataLoader(train_dataset, self._batch_size)
         self._validate_dataloader = AsteroidMotionDataset.DataLoader(validate_dataset, self._batch_size)
 
         # CUDA configuration
-        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self._device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         torch.set_default_device(self._device)
         
         print("Using compute module " + str(self._device))
@@ -48,18 +52,17 @@ class Trainer:
         model_wrapped = SuperPoint()
         
         #if torch.cuda.device_count() > 1:
-        #    self._model = torch.nn.parallel.DistributedDataParallel(model_wrapped.to(self._device))
+        #    self._model = torch.nn.parallel.DistributedDataPaactual_featuresrallel(model_wrapped.to(self._device))
         #    print("Using multiple GPUs")
         #else:
         self._model = model_wrapped.to(self._device)
         
         # Loss function metrics
         self._coords_matcher = Matcher(L2, LowerThan(self._epsilon))
-        self._features_matcher = Matcher(Cosine, GreaterThan(0.3))
+        self._features_matcher = Matcher(Cosine, MaxRatio(1.0))
         
         # Optimizer instantiation
         self._optimizer = torch.optim.Adam(self._model.parameters(), lr=lr, weight_decay=weight_decay)
-        self._scaler = GradScaler()
         
         # Debugging tools
         self._visualizer = Visualizer(1024)
@@ -80,9 +83,13 @@ class Trainer:
                 "epsilon": self._epsilon
             }
         )
+        
+        #self._model.load_state_dict(torch.load(self._pth_path))
                 
     # Main loop. Called by the ROS node. Supposedly trains the neural network.
     def loop(self):
+        
+        first_sample = self._validate_frontend.get_sync(0)
         
         best_f1 = 0
         
@@ -93,14 +100,13 @@ class Trainer:
 
             self._model.train()
 
-            for batch in self._train_dataloader:    
+            for batch in self._train_dataloader:  
                 self._optimizer.zero_grad()
                 (loss, stats) = self.forward(batch)
                 train_losses.append(loss.item())
                 train_stats.extend(stats)
-                self._scaler.scale(loss).backward()
-                self._scaler.step(self._optimizer)
-                self._scaler.update()
+                loss.backward()
+                self._optimizer.step()
             
 
             # Validation
@@ -108,7 +114,8 @@ class Trainer:
             val_stats = []
 
             self._model.eval()
-
+            
+            # Validate model
             for batch in self._validate_dataloader:
                 with torch.set_grad_enabled(False):
                     (loss, stats) = self.forward(batch)
@@ -142,14 +149,20 @@ class Trainer:
                 "Train F1-Score": avg_train_f1*100, 
                 "Validation F1-Score": avg_val_f1*100,
             })
-            
+
             # View feature map
-            batch = next(iter(self._validate_dataloader))
-            batch_gpu = self.to_device(batch)
+            batch = BatchedMotionData.from_list([first_sample])
+            batch_gpu = batch.to(self._device)
             batch_output = self.forward_each(batch_gpu)
-            (c1, c2, f1, f2) = self.get_sample(batch_output, 0)
-            self._visualizer.plot(c2.detach().cpu().numpy(), f2.detach().cpu().numpy())
+            output = batch_output.retrieve(0)
+
+            self._visualizer.plot(output.prev_kps.detach().cpu().numpy(), output.prev_features.detach().cpu().numpy())
             
+            true_dists, true_matches = self._coords_matcher.match(output.proj_kps, output.next_kps)
+            pred_dists, pred_matches = self._features_matcher.match(output.prev_features, output.next_features)
+            
+            stats = Statistics(true_dists, true_matches, pred_dists, pred_matches)
+
             # Saving current weights to provided file
             if avg_val_f1 > best_f1:
                 torch.save(self._model.state_dict(), self._pth_path)
@@ -163,20 +176,20 @@ class Trainer:
     
     # Forwards a batch to the model
     def forward(self, batch): 
-        batch_gpu = self.to_device(batch)
+        batch_gpu = batch.to(self._device)
         batch_output = self.forward_each(batch_gpu)
         batch_loss = 0
         batch_stats = []
 
         with torch.amp.autocast(device_type="cuda", dtype=torch.float32):
             for idx in range(self._batch_size):
-                (c1, c2, f1, f2) = self.get_sample(batch_output, idx)
-                                                
-                true_dists, true_matches = self._coords_matcher.match(c1, c2)
-                pred_dists, pred_matches = self._features_matcher.match(f1, f2)
+                output = batch_output.retrieve(idx)
+
+                true_dists, true_matches = self._coords_matcher.match(output.proj_kps, output.next_kps)
+                pred_dists, pred_matches = self._features_matcher.match(output.prev_features, output.next_features)
                 
                 batch_loss += self.loss(true_dists, true_matches, pred_dists, pred_matches)
-                batch_stats.append(Statistics(true_matches.detach(), pred_matches.detach()))                    
+                batch_stats.append(Statistics(true_dists.detach(), true_matches.detach(), pred_dists.detach(), pred_matches.detach()))                    
                 
         loss = batch_loss / self._batch_size
 
@@ -184,19 +197,15 @@ class Trainer:
 
     # Forwards the batch by decomposing the motion into the two sets of features and coordinates
     def forward_each(self, batch):
-        # "i" stands for "input", "o" stands for "output", "c" stands for "coordinate", "f" stands for "feature" 
-        (ic1, ic2, if1, if2) = batch
-        (oc1, of1) = self.forward_sparse(ic1, if1)
-        (oc2, of2) = self.forward_sparse(ic2, if2)
-        return (oc1, oc2, of1, of2)
+        prev_features_out = self.forward_sparse(batch.prev_kps, batch.prev_features)
+        next_features_out = self.forward_sparse(batch.next_kps, batch.next_features)
+        return BatchedMotionData(batch.prev_kps, batch.proj_kps, batch.next_kps, prev_features_out, next_features_out)
     
     # Converts the coordinates and features to a MinkowskiEngine-compliant format and forwards them to the NN
     def forward_sparse(self, input_coords, input_features):
-        input = ME.SparseTensor(input_features[:, None], input_coords)
+        input = ME.SparseTensor(input_features, input_coords)
         output = self._model.forward(input)
-        output_coords = output.coordinates
-        output_features = output.features
-        return (output_coords, output_features)
+        return output.features
     
     ## Loss function
     
@@ -207,8 +216,7 @@ class Trainer:
         
         pred_dists = torch.nn.functional.normalize(pred_dists, dim=0)
         
-        # In a two-ended segment model, there is a 2eps probability to match a neighbouring pixel
-        weight = 16 # Average number of features
+        weight = 1 # This parameter has little effect
         margin = 0.3
         
         # Ground truth
@@ -216,12 +224,15 @@ class Trainer:
         diffs = 1-true_matches
 
         # Hinge loss
-        fn_loss = matches * torch.maximum(torch.tensor(0), 1 - pred_dists)
+        fn_loss = matches * torch.maximum(torch.tensor(0), 1.0 - pred_dists)
         fp_loss = diffs * torch.maximum(torch.tensor(0), pred_dists - margin)
         
         # Average
-        fn_loss_avg = fn_loss.sum()/matches.sum()
-        fp_loss_avg = fp_loss.sum()/diffs.sum()
+        fn_loss_avg = fn_loss.sum()
+        fp_loss_avg = fp_loss.sum()
+
+        #print(fn_loss_avg)
+        #print(fp_loss_avg)
         
         # Combine
         hinge_loss = weight*fn_loss_avg + fp_loss_avg
@@ -237,26 +248,3 @@ class Trainer:
         # kl_div = torch.sum(torch.exp(expected_likelihood) * (expected_likelihood - predicted_likelihood), dim=0)
         
         # return kl_div.mean()
-    
-            
-    ## Utility methods
-    
-    # Sends a given motion sample to the GPU
-    def to_device(self, sample):
-        c1, c2, f1, f2 = sample
-        
-        c1_dev = c1.to(self._device)
-        c2_dev = c2.to(self._device)
-        f1_dev = f1.to(self._device)
-        f2_dev = f2.to(self._device)
-    
-        return (c1_dev, c2_dev, f1_dev, f2_dev)
-    
-     # Retrieves the motion sample from a given a batch index and normalizes the coordinates to the image size
-    def get_sample(self, batch, idx):
-        (c1, c2, f1, f2) = batch
-        
-        filter1 = c1[:, 0] == idx
-        filter2 = c2[:, 0] == idx
-        
-        return (c1[filter1, 1:3], c2[filter2, 1:3], f1[filter1], f2[filter2])

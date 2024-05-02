@@ -1,5 +1,5 @@
+import torch
 from abc import ABC, abstractmethod
-import numpy as np
 from astronet_msgs import FeatureData
 
 class Backend(ABC):
@@ -21,8 +21,8 @@ class Backend(ABC):
             coords_cpu = coords.cpu()
             features_cpu = features.cpu()
             
-            depth_value = camera_data.depth[coords_cpu[:, 0], coords_cpu[:, 1]]
-            cam_coords = np.hstack([coords_cpu, depth_value[:, None]])
+            depth_value = torch.from_numpy(camera_data.depth[coords_cpu[:, 0], coords_cpu[:, 1]])
+            cam_coords = torch.hstack([coords_cpu.to(dtype=torch.float), depth_value[:, None]])
             
             features_data = FeatureData.RobotData.SparseCameraData(camera_data.pose, camera_data.k, cam_coords, features_cpu)
             robot_data = FeatureData.RobotData([features_data])
