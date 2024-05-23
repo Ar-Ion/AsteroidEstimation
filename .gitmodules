@@ -1,0 +1,3 @@
+[submodule "src/feature_matcher/feature_matcher/backends/LightGlue"]
+	path = src/feature_matcher/feature_matcher/backends/LightGlue
+	url = https://github.com/cvg/LightGlue
