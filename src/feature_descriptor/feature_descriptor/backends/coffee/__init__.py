@@ -1,2 +1,3 @@
-from .untrained_detector import UntrainedCOFFEEBackend
-from .trained_detector import TrainedCOFFEEBackend
+from .non_trained import UntrainedCOFFEEBackend
+from .trained import TrainedCOFFEEBackend
+from .descriptor import COFFEEDescriptor

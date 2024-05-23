@@ -23,16 +23,19 @@ def main(args=None):
     ])
 
     node.declare_parameters("", [
-        ("backend.type", rclpy.Parameter.Type.STRING),
-        ("backend.model_type", rclpy.Parameter.Type.STRING),
-        ("backend.model_path", rclpy.Parameter.Type.STRING)
+        ("descriptor_config.backend", rclpy.Parameter.Type.STRING),
+        ("descriptor_config.model_type", rclpy.Parameter.Type.STRING),
+        ("descriptor_config.model_path", rclpy.Parameter.Type.STRING),
+        ("descriptor_config.autoload", rclpy.Parameter.Type.BOOL),
+        ("descriptor_config.design_param", rclpy.Parameter.Type.INTEGER),
+        ("descriptor_config.max_features", rclpy.Parameter.Type.INTEGER),
     ])
 
     size = node.get_parameter("size").value
     mode = node.get_parameter("mode").value
     input_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("input").items()))
     output_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("output").items()))
-    backend_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("backend").items()))
+    descriptor_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("descriptor_config").items()))
     
     client_wrapped = astronet_frontends.factory.instance(input_params, mode, size)
     server_wrapped = astronet_frontends.factory.instance(output_params, mode, size)
@@ -43,7 +46,7 @@ def main(args=None):
     client.start()
     server.start()
     
-    backend = feature_descriptor.backends.factory.instance(backend_params, client, server, size)
+    backend = feature_descriptor.backends.factory.instance(descriptor_params, client, server, size)
 
     try:
         backend.loop()

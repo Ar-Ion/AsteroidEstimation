@@ -25,8 +25,21 @@ class UntrainedCOFFEEBackend(Backend):
         print("Building CUDA module and kernel...")
         self._coffee_cuda = load(name='sparsify', sources=[cuda_module, cuda_kernel])
         print("CUDA module and kernel built")
+        
+        if backend_params["design_param"]:
+            self._threshold = int(backend_params["design_param"])
+        else:
+            self._threshold = 100
+            
+        if backend_params["max_features"]:
+            self._max_features = int(backend_params["max_features"])
+        else:
+            self._max_features = 4096
+            
+        print(f"Max number of features: {self._max_features}")
+        print(f"Threshold: {self._threshold}")
 
-        self._coffee_cuda.init(100)
+        self._coffee_cuda.init(self._threshold)
     
     def detect_features(self, image):
         #plt.figure()
@@ -50,12 +63,10 @@ class UntrainedCOFFEEBackend(Backend):
         # Filter out negative angles
         coords = coords[:, features > 0]
         features = features[features > 0]
-        
-        # Take the 4096 "best" features
-        max_features = 4096
-
-        if coords.shape[1] > max_features:
-            most_relevant = torch.topk(features, max_features)
+                
+        # Take the "best" features
+        if coords.shape[1] > self._max_features:
+            most_relevant = torch.topk(features, self._max_features)
             coords = coords[:, most_relevant.indices]
             features = features[most_relevant.indices]
             
