@@ -2,9 +2,10 @@ import rclpy
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 
 import astronet_frontends.factory
-from astronet_frontends import AsyncFrontend
+from astronet_frontends import AsyncFrontend, DriveClientFrontend
 
-from .benchmarker import Benchmarker
+from .simple_stats import SimpleStats
+from .precision_recall import PrecisionRecall
 
 def main(args=None):
     rclpy.init(args=args)
@@ -24,10 +25,11 @@ def main(args=None):
     ])
     
     node.declare_parameters("", [
-        ("config.coords.metric", rclpy.Parameter.Type.STRING),
-        ("config.coords.criterion", rclpy.Parameter.Type.STRING),
-        ("config.coords.criterion_args", rclpy.Parameter.Type.DOUBLE_ARRAY),
-        ("config.features.metric", rclpy.Parameter.Type.STRING),
+        ("config.keypoints.metric", rclpy.Parameter.Type.STRING),
+        ("config.keypoints.criterion", rclpy.Parameter.Type.STRING),
+        ("config.keypoints.criterion_args", rclpy.Parameter.Type.DOUBLE_ARRAY),
+        ("config.features.matcher", rclpy.Parameter.Type.STRING),
+        ("config.features.matcher_args", rclpy.Parameter.Type.STRING_ARRAY),
         ("config.features.criterion", rclpy.Parameter.Type.STRING),
         ("config.features.criterion_args", rclpy.Parameter.Type.DOUBLE_ARRAY)
     ])
@@ -45,10 +47,13 @@ def main(args=None):
     frontend = AsyncFrontend(frontend_wrapped, AsyncFrontend.Modes.NO_WAIT)
     frontend.start()
 
-    benchmarker = Benchmarker(frontend, size, config)
+    simple_stats = SimpleStats(frontend, size, config)
+    precision_recall = PrecisionRecall(frontend, size, config)
 
     try:
-        benchmarker.loop()
+        simple_stats.loop()        
+        precision_recall.loop()
+        
         rclpy.shutdown()
     except KeyboardInterrupt:
         pass

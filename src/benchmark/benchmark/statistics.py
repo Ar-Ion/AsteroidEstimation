@@ -1,87 +1,5 @@
-from abc import ABC, abstractmethod
-import importlib
-import torch
-
-class MatchMetric(ABC):
-    @abstractmethod
-    def dist(a, b):
-        pass
-
-    def instance(type):
-        module = importlib.import_module("benchmark.statistics")
-        metric_class = getattr(module, type)
-        return metric_class
-
-class L2(MatchMetric):
-    def dist(a, b):
-        return torch.cdist(a.float(), b.float()).to(dtype=torch.float32)
-    
-class Cosine(MatchMetric):
-    def dist(a, b):
-        return (a @ b.T).to(dtype=torch.float32)
-    
-class MatchCriterion(ABC):
-    @abstractmethod
-    def apply(self, dist_matrix):
-        pass
-
-    def instance(type, *args):
-        module = importlib.import_module("benchmark.statistics")
-        criterion_class = getattr(module, type)
-        criterion = criterion_class(*args)
-        return criterion
-    
-class LowerThan(MatchCriterion):
-    def __init__(self, epsilon):
-        self._epsilon = epsilon
-    
-    def apply(self, dist_matrix):
-        match_matrix = (dist_matrix < self._epsilon)
-        return match_matrix.to(dtype=torch.float32)
-
-class GreaterThan(MatchCriterion):
-    def __init__(self, epsilon):
-        self._epsilon = epsilon
-        
-    def apply(self, dist_matrix):
-        match_matrix = (dist_matrix > self._epsilon)
-        return match_matrix.to(dtype=torch.float32)
-
-class MaxRatio(MatchCriterion):
-    def __init__(self, ratio):
-        self._ratio = ratio
-    
-    def apply(self, dist_matrix):
-        top = torch.topk(dist_matrix, 2, dim=0)
-        match_matrix = dist_matrix > self._ratio*top.values[1]
-        return match_matrix.to(dtype=torch.float32)
-    
-class MinRatio(MatchCriterion):
-    def __init__(self, ratio):
-        self._ratio = ratio
-    
-    def apply(self, dist_matrix):
-        top = torch.topk(dist_matrix, 2, dim=0, largest=False)
-        match_matrix = dist_matrix < self._ratio*top.values[1]
-        return match_matrix.to(dtype=torch.float32)
-    
-class PassThrough(MatchCriterion):
-    def apply(self, dist_matrix):
-        return dist_matrix
-    
-    
-class Matcher:
-    def __init__(self, metric, criterion):
-        self._metric = metric
-        self._criterion = criterion
-        
-    def match(self, a, b):
-        dist_matrix = self._metric.dist(a, b)
-        match_matrix = self._criterion.apply(dist_matrix)
-        return dist_matrix, match_matrix
-
 class Statistics:
-    def __init__(self, true_dists, true_matches, pred_dists, pred_matches):
+    def __init__(self, true_dists, true_matches, pred_matches):
         self._true_count = true_matches.sum()/2 # Note that every match is counted twice, hence the division
         self._positive_count = pred_matches.sum()/2
         self._tp = (true_matches * pred_matches).mean()
@@ -121,6 +39,4 @@ class Statistics:
         return self._dist
     
     def f1(self):
-        precision = self.precision()
-        recall = self.recall()
-        return 2*(precision*recall)/(precision+recall)
+        return 2*self._tp / (2*self._tp + self._fp + self._fn)
