@@ -20,8 +20,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'node = motion_synthesizer.node:main',
-            'verify = motion_synthesizer.verify:main'
+            'generate = motion_synthesizer.generate:main',
+            'verify = motion_synthesizer.verify:main',
+            'chunkify = motion_synthesizer.chunkify:main'
         ],
     },
 )

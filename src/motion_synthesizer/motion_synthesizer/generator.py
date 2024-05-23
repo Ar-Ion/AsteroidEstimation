@@ -3,8 +3,8 @@ import quaternion
 import torch
 
 from astronet_frontends import DriveClientFrontend
-from camera_utils import Extrinsics, Intrinsics, CameraProjection
-from astronet_msgs import MotionData
+from astronet_utils import ExtrinsicsUtils, IntrinsicsUtils, ProjectionUtils
+from astronet_msgs import MotionData, ProjectionData
 
 class MotionGenerator:
     def __init__(self, client, server, input_size, output_size):
@@ -12,7 +12,6 @@ class MotionGenerator:
         self._server = server
         self._input_size = input_size
         self._output_size = output_size
-        self._count = 0
 
         # CUDA configuration
         self._device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -31,22 +30,25 @@ class MotionGenerator:
         env2cam_trans = quaternion.rotate_vectors(cam_quat, env_pose.trans - cam_pose.trans)
         env2cam_quat = rot * env_quat
 
-        intrinsics = Intrinsics(data.robot_data.cam_data[0].k)
-        extrinsics = Extrinsics(env2cam_trans, env2cam_quat)
+        intrinsics = IntrinsicsUtils.from_K(np.array(data.robot_data.cam_data[0].k))
+        extrinsics = ExtrinsicsUtils.from_SE3_7D(env2cam_trans, env2cam_quat)
 
-        return CameraProjection(intrinsics, extrinsics)
+        return ProjectionData(intrinsics, extrinsics)
 
     def loop(self):
-        while self._count < self._output_size:
-            if self._count != 0 and self._count*2 % self._input_size == 0:
+        
+        count = 0
+        
+        while count < self._output_size:
+            if count != 0 and count*2 % self._input_size == 0:
                 # We have iterated through the whole input dataset. The data must be reshuffled.
                 self._client.send_event(DriveClientFrontend.Events.RESET)
         
             data1 = self._client.receive(blocking=True)
             data2 = self._client.receive(blocking=True)
             
-            proj1 = self.get_projection(data1)
-            proj2 = self.get_projection(data2)
+            proj1 = ProjectionUtils.to(self.get_projection(data1), device=self._device)
+            proj2 = ProjectionUtils.to(self.get_projection(data2), device=self._device)
             
             distance1 = torch.Tensor(data1.robot_data.cam_data[0].pose.trans - data1.env_data.pose.trans).to(self._device)
             distance2 = torch.Tensor(data2.robot_data.cam_data[0].pose.trans - data2.env_data.pose.trans).to(self._device)
@@ -56,18 +58,22 @@ class MotionGenerator:
             data2_coords = torch.Tensor(data2.robot_data.cam_data[0].coords).to(self._device)
             data2_features = torch.Tensor(data2.robot_data.cam_data[0].features).to(self._device)
             
-            env1_coords = proj1.camera2object(data1_coords)
-            reproj1_coords = proj2.object2camera(env1_coords)
+            env1_coords = ProjectionUtils.camera2object(proj1, data1_coords)
+            reproj1_coords = ProjectionUtils.object2camera(proj2, env1_coords)
 
+            # Remove all features that cannot be visble on the next image
             non_nan_filter = ~torch.any(reproj1_coords.isnan(), dim=1)
             visible_filter = reproj1_coords[:, 2] < torch.norm(distance2)
             combined_filter = non_nan_filter & visible_filter
 
             prev_kps = data1_coords[combined_filter, 0:2].to(dtype=torch.int).cpu()
-            proj_kps = reproj1_coords[combined_filter, 0:2].to(dtype=torch.int).cpu()
             next_kps = data2_coords[:, 0:2].to(dtype=torch.int).cpu()
             prev_features = data1_features[combined_filter].cpu()
             next_features = data2_features.cpu()
+            prev_depths = data1_coords[combined_filter, 2].cpu()
+            next_depths = data2_coords[:, 2].cpu()
+            prev_proj = ProjectionUtils.to(proj1, device="cpu")
+            next_proj = ProjectionUtils.to(proj2, device="cpu")
                         
             # plt.figure()
             # plt.scatter(prev_kps[:, 1], prev_kps[:, 0], s=0.1)
@@ -77,11 +83,25 @@ class MotionGenerator:
             # plt.ylim(0, 1024)
             # plt.show()
             
-            data_out = MotionData(prev_kps, proj_kps, next_kps, prev_features, next_features)
+            prev_points = MotionData.PointsData(
+                prev_kps,
+                prev_depths,
+                prev_features,
+                prev_proj
+            )
+            
+            next_points = MotionData.PointsData(
+                next_kps,
+                next_depths,
+                next_features,
+                next_proj
+            )
+            
+            data_out = MotionData(prev_points, next_points)
             
             self._server.transmit(data_out)
 
-            self._count += 1
+            count += 1
 
-            if self._count % 100 == 0:
-                print("Generated " + f"{self._count/self._output_size:.0%}" + " of synthetic motion data")
+            if count % 100 == 0:
+                print("Generated " + f"{count/self._output_size:.0%}" + " of synthetic motion data")

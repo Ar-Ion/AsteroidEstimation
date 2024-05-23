@@ -1,7 +1,8 @@
 import rclpy
+import numpy as np
 
 from astronet_frontends import AsyncFrontend, factory
-from .generator import MotionGenerator
+from .chunkifier import Chunkifier
  
 def main(args=None):
     rclpy.init(args=args)
@@ -10,6 +11,8 @@ def main(args=None):
     
     node.declare_parameter("size", rclpy.Parameter.Type.INTEGER)
     node.declare_parameter("mode", rclpy.Parameter.Type.STRING)
+    node.declare_parameter("input_dim", rclpy.Parameter.Type.INTEGER)
+    node.declare_parameter("output_dim", rclpy.Parameter.Type.INTEGER)
 
     node.declare_parameters("", [
         ("input.type", rclpy.Parameter.Type.STRING),
@@ -22,12 +25,17 @@ def main(args=None):
     ])
     
     size = node.get_parameter("size").value
+    in_dim = node.get_parameter("input_dim").value
+    out_dim = node.get_parameter("output_dim").value
     mode = node.get_parameter("mode").value
     input_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("input").items()))
     output_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("output").items()))
 
-    client_wrapped = factory.instance(input_params, mode, size)
-    server_wrapped = factory.instance(output_params, mode, size/2) # Each output motion requires two input images
+    chunks_per_row = int(np.ceil(float(in_dim)/float(out_dim)))
+    num_chunks = chunks_per_row**2
+    
+    client_wrapped = factory.instance(input_params, mode, size//2)
+    server_wrapped = factory.instance(output_params, mode, size*num_chunks//2) # Each output motion requires two input images
     
     client = AsyncFrontend(client_wrapped, AsyncFrontend.Modes.NO_WAIT)
     server = AsyncFrontend(server_wrapped, AsyncFrontend.Modes.WAIT)
@@ -35,7 +43,7 @@ def main(args=None):
     client.start()
     server.start()
     
-    backend = MotionGenerator(client, server, size, size/2)
+    backend = Chunkifier(client, server, size//2, in_dim, out_dim)
 
     try:
         backend.loop()
