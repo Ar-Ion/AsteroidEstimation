@@ -3,7 +3,7 @@ import torch.nn as nn
 import MinkowskiEngine as ME
 import MinkowskiEngine.MinkowskiFunctional as MF
 
-class AutoEncoder(ME.MinkowskiNetwork):
+class SparseAutoEncoder(ME.MinkowskiNetwork):
 
     def __init__(self, D=2):
         super(AutoEncoder, self).__init__(D)
