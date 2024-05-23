@@ -8,8 +8,7 @@ from launch.substitutions import LaunchConfiguration
 def generate_launch_description():
     run_params = {
         "train_size": LaunchConfiguration("train_size"),
-        "validate_size": LaunchConfiguration("validate_size"),
-        "iter_ratio": LaunchConfiguration("iter_ratio")
+        "validate_size": LaunchConfiguration("validate_size")
     }
 
     dataset_params = os.path.join(get_package_share_directory('pipeline'), 'config', 'pipeline.yaml')
@@ -29,6 +28,5 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument("train_size"),
         DeclareLaunchArgument("validate_size"),
-        DeclareLaunchArgument("iter_ratio", default_value="64"),
         trainer
     ])

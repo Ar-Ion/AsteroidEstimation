@@ -1,25 +1,27 @@
 eval_benchmarker:
   ros__parameters: 
     config:
-      coords:
+      keypoints:
         metric: "L2"
-        criterion: "LowerThan"
+        criterion: "LessThan"
         criterion_args: [1.0]
 
       features:
-        metric: "L2"
-        criterion: "MinRatio"
-        criterion_args: [0.85]
+        matcher: "ClassicalMatcher"
+        matcher_args: ["L2"]
+        criterion: "LessThan"
+        criterion_args: [170.0]
 
       # features:
       #   metric: "L2"
       #   criterion: "LowerThan"
       #   criterion_args: [230.0]
 
-# [node-1] Average accuracy: 0.9999061822891235
-# [node-1] Average precision: 0.7903174161911011
-# [node-1] Average recall: 0.45999675989151
-# [node-1] Average F1 score: 0.5784803628921509
-# [node-1] Average feature count: 4410.984375
-# [node-1] Average true count: 1444.796875
-# [node-1] Average positive count: 848.8125
+# [node-3] Average accuracy: 0.9988807439804077
+# [node-3] Average precision: 0.8512169122695923
+# [node-3] Average recall: 0.5156357884407043
+# [node-3] Average F1 score: 0.6376200914382935
+# [node-3] Average feature count: 5017.875
+# [node-3] Average true count: 1583.625
+# [node-3] Average positive count: 975.0
+# [node-3] Average pixel location error: 3.3617546558380127

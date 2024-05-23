@@ -1,23 +1,30 @@
 eval_benchmarker:
   ros__parameters: 
     config:
-      coords:
+      keypoints:
         metric: "L2"
-        criterion: "LowerThan"
-        criterion_args: [1.41]
+        criterion: "LessThan"
+        criterion_args: [2.0]
 
       features:
-        metric: "Cosine"
-        criterion: "MaxRatio"
-        criterion_args: [1.0]
+        matcher: "LightglueMatcher"
+        matcher_args: ["/home/arion/AsteroidMatcherModel.pth"]
+        criterion: "GreaterThan"
+        criterion_args: [0.01]
 
-# For GreaterThan > criterion_args: [0.82]
+      # features:
+      #   matcher: "ClassicalMatcher"
+      #   matcher_args: ["Cosine"]
+      #   criterion: "GreaterThan"
+      #   criterion_args: [0.75]
 
-# [node-1] Average accuracy: 0.9996296763420105
-# [node-1] Average precision: 0.02971714921295643
-# [node-1] Average recall: 0.020412838086485863
-# [node-1] Average F1 score: 0.02381930686533451
-# [node-1] Average feature count: 4095.796875
-# [node-1] Average true count: 1812.546875
-# [node-1] Average positive count: 1378.625
+# For GreaterThan > criterion_args: [0.75]
 
+# [node-3] Average accuracy: 0.9998650550842285
+# [node-3] Average precision: 0.6729938983917236
+# [node-3] Average recall: 0.8289981484413147
+# [node-3] Average F1 score: 0.742730975151062
+# [node-3] Average feature count: 9367.75
+# [node-3] Average true count: 10202.125
+# [node-3] Average positive count: 12593.375
+# [node-3] Average pixel location error: 5.036327362060547

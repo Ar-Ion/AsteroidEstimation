@@ -11,7 +11,7 @@ def generate_launch_description():
     run_params = {
         "size": LaunchConfiguration("size"),
         "mode": "test",
-        "backend.type": LaunchConfiguration("backend"),
+        "descriptor_config.backend": LaunchConfiguration("backend"),
         "eval.path": LaunchConfiguration("output"),
         "skip_synthesis": LaunchConfiguration("skip_synthesis")
     }
@@ -30,7 +30,7 @@ def generate_launch_description():
 
 def create_nodes(context, run_params, dataset_params):
     eval_dir = context.perform_substitution(run_params["eval.path"])
-    backend = context.perform_substitution(run_params["backend.type"])
+    backend = context.perform_substitution(run_params["descriptor_config.backend"])
     size = context.perform_substitution(run_params["size"])
     skip_synthesis = context.perform_substitution(run_params["skip_synthesis"])
     

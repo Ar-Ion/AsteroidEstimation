@@ -8,6 +8,9 @@ gen_descriptor:
       type: "DriveServerFrontend"
       path: "/home/arion/AsteroidFeatureDataset"
 
+    backend:
+      max_features: 16384
+
 gen_synthesizer:
   ros__parameters:
     input:
@@ -18,11 +21,21 @@ gen_synthesizer:
       type: "DriveServerFrontend"
       path: "/home/arion/AsteroidMotionDataset"
 
-gen_verifier:
+gen_chunkifier:
   ros__parameters:
     input:
       type: "DriveClientFrontend"
       path: "/home/arion/AsteroidMotionDataset"
+
+    output:
+      type: "DriveServerFrontend"
+      path: "/home/arion/AsteroidChunkedMotionDataset"
+
+gen_verifier:
+  ros__parameters:
+    input:
+      type: "DriveClientFrontend"
+      path: "/home/arion/AsteroidChunkedMotionDataset"
 
 trainer:
   ros__parameters:
@@ -30,9 +43,11 @@ trainer:
       type: "DriveClientFrontend"
       path: "/home/arion/AsteroidMotionDataset"
 
-    output:
-      model_type: "PTH"
-      model_path: "/home/arion/AsteroidModel.pth"
+    descriptor_config:
+      model_path: "/home/arion/AsteroidDescriptorModel.pth"
+
+    matcher_config:
+      model_path: "/home/arion/AsteroidMatcherModel.pth"
 
 eval_descriptor:
   ros__parameters:     
@@ -43,9 +58,9 @@ eval_descriptor:
     output:
       type: "DriveServerFrontend"
 
-    backend:
-      model_type: "PTH"
-      model_path: "/home/arion/AsteroidModel.pth"
+    descriptor_config:
+      model_path: "/home/arion/AsteroidDescriptorModel.pth"
+      max_features: 16384
 
 eval_synthesizer:
   ros__parameters:
@@ -56,6 +71,14 @@ eval_synthesizer:
       type: "DriveServerFrontend"
 
 eval_benchmarker:
+  ros__parameters:
+    input:
+      type: "DriveClientFrontend"
+
+    output:
+      type: "Plots"
+
+eval_feature_matcher:
   ros__parameters:
     input:
       type: "DriveClientFrontend"

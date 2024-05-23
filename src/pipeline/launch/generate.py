@@ -1,4 +1,5 @@
 import os
+import numpy as np
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import RegisterEventHandler, DeclareLaunchArgument, OpaqueFunction
@@ -10,7 +11,9 @@ def generate_launch_description():
     run_params = {
         "size": LaunchConfiguration("size"),
         "mode": LaunchConfiguration("mode"),
-        "backend.type": "UntrainedCOFFEE"
+        "input_dim": LaunchConfiguration("input_dim"),
+        "output_dim": LaunchConfiguration("output_dim"),
+        "descriptor_config.backend": "UntrainedCOFFEE"
     }
 
     dataset_params = os.path.join(get_package_share_directory('pipeline'), 'config', 'pipeline.yaml')
@@ -29,8 +32,20 @@ def generate_launch_description():
  
     synthesizer = Node(
         package="motion_synthesizer",
-        executable="node",
+        executable="generate",
         name="gen_synthesizer",
+        output="screen",
+        emulate_tty=True,
+        parameters=[
+            run_params,
+            dataset_params
+        ]
+    )
+    
+    chunkifier = Node(
+        package="motion_synthesizer",
+        executable="chunkify",
+        name="gen_chunkifier",
         output="screen",
         emulate_tty=True,
         parameters=[
@@ -46,8 +61,14 @@ def generate_launch_description():
         DeclareLaunchArgument("size"),
         RegisterEventHandler(
             OnExecutionComplete(
-                target_action=synthesizer,
+                target_action=chunkifier,
                 on_completion=[create_verifier]
+            )
+        ),
+        RegisterEventHandler(
+            OnExecutionComplete(
+                target_action=synthesizer,
+                on_completion=[chunkifier]
             )
         ),
         RegisterEventHandler(
@@ -60,10 +81,15 @@ def generate_launch_description():
     ])
 
 def create_verifier_node(context, run_params, dataset_params):
-    size = context.perform_substitution(run_params["size"])
+    size = int(context.perform_substitution(run_params["size"]))
+    in_dim = float(context.perform_substitution(run_params["input_dim"]))
+    out_dim = float(context.perform_substitution(run_params["output_dim"]))
+    
+    chunks_per_row = int(np.ceil(in_dim/out_dim))
+    num_chunks = chunks_per_row**2
     
     size_override = {
-        "size": int(int(size)/2),
+        "size": int(num_chunks*size/2)
     }
     
     verifier = Node(
