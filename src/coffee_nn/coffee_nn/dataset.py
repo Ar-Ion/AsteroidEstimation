@@ -1,4 +1,5 @@
 import threading
+import random
 from torch.utils.data import Dataset, DataLoader
 from astronet_frontends import DriveClientFrontend
 from astronet_msgs import BatchedMotionData
@@ -22,26 +23,46 @@ class AsteroidMotionDataset(Dataset):
             if self._count % self._size == 0:
                 # We reached the end of the dataset. Reset index and shuffle data.
                 self._frontend.send_event(DriveClientFrontend.Events.RESET)
-                
-        
-        prev_features = data.prev_features
-        next_features = data.next_features
-        
-        if self._transform:
-            prev_features = self._transform(prev_features)
-            next_features = self._transform(next_features)
             
         return data
-                    
+
     def __len__(self):
         return self._size
+    
+    def _collate(lst, evaluate):
+        # chunks = []
+        
+        # for l in lst:
+        #     chunked_data = l.to(device="cuda").create_chunks(1024, 1024)
+        #     #random.shuffle(chunked_data)
+        #     chunks.extend(chunked_data)
+        
+        # valid_chunks = list(filter(lambda x: x.is_valid(), chunks))
+                        
+        return BatchedMotionData.from_list(lst)
+    
+    def _collate_for_training(lst):
+        return AsteroidMotionDataset._collate(lst, False)
+    
+    def _collate_for_evaluation(lst):
+        return AsteroidMotionDataset._collate(lst, True)
 
-    def DataLoader(dataset, batch_size, drop_last=False):
-        return DataLoader(
-            dataset, 
-            batch_size=batch_size, 
-            shuffle=False, 
-            num_workers=1, 
-            collate_fn=BatchedMotionData.from_list,
-            drop_last=drop_last
-        )
+    def DataLoader(dataset, batch_size, evaluate=True, drop_last=False):
+        if evaluate:
+            return DataLoader(
+                dataset, 
+                batch_size=batch_size, 
+                shuffle=False, 
+                num_workers=8,
+                collate_fn=AsteroidMotionDataset._collate_for_evaluation,
+                drop_last=drop_last
+            )
+        else:
+            return DataLoader(
+                dataset, 
+                batch_size=batch_size, 
+                shuffle=False, 
+                num_workers=8,
+                collate_fn=AsteroidMotionDataset._collate_for_training,
+                drop_last=drop_last
+            )
