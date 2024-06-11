@@ -1,9 +1,9 @@
 from astronet_msgs import ProjectionData
 from .intrinsics import IntrinsicsUtils
 from .extrinsics import ExtrinsicsUtils
-from .abstractions import Batchable, Torchable
+from .abstractions import Batchable, Torchable, Filterable
 
-class ProjectionUtils(Batchable, Torchable):
+class ProjectionUtils(Batchable, Torchable, Filterable):
     # Functionalities
     def camera2object(projection_data, point):
         return ExtrinsicsUtils.revert(projection_data.extrinsics, IntrinsicsUtils.revert(projection_data.intrinsics, point.float()))
@@ -22,6 +22,12 @@ class ProjectionUtils(Batchable, Torchable):
         extrinsics = ExtrinsicsUtils.detach(projection_data.extrinsics)
         return ProjectionData(intrinsics, extrinsics)
     
+    # Compliance with Filterable abstraction
+    def filter(projection_data, filter):
+        intrinsics = IntrinsicsUtils.filter(projection_data.intrinsics, filter)
+        extrinsics = ExtrinsicsUtils.filter(projection_data.extrinsics, filter)
+        return ProjectionData(intrinsics, extrinsics)
+    
     # Compliance with Batchable abstraction
     def batched(proj_data_list):
         num_batches = len(proj_data_list)
@@ -35,6 +41,6 @@ class ProjectionUtils(Batchable, Torchable):
         return ProjectionData(batched_intrinsics, batched_extrinsics, num_batches)
     
     def retrieve(proj_data, index):
-        intrinsics = IntrinsicsUtils.retrieve(proj_data.instrinsics, index)
+        intrinsics = IntrinsicsUtils.retrieve(proj_data.intrinsics, index)
         extrinsics = ExtrinsicsUtils.retrieve(proj_data.extrinsics, index)
         return ProjectionData(intrinsics, extrinsics)

@@ -1,6 +1,5 @@
 import cv2
-import numpy as np
-from matplotlib import pyplot as plt
+import torch
 
 from . import Backend
 
@@ -11,4 +10,5 @@ class BRISKBackend(Backend):
         self._extractor = cv2.BRISK_create()
 
     def detect_features(self, image):
-        return self._extractor.detect(image)
+        (kp, dess) = self._extractor.detectAndCompute(image, None)
+        return (torch.tensor(list(map(lambda x: (x.pt[1], x.pt[0]), kp)), dtype=torch.int), torch.from_numpy(dess))

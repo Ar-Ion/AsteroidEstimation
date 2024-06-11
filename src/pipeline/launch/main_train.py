@@ -15,8 +15,8 @@ def generate_launch_description():
      
     trainer = Node(
         package="coffee_nn",
-        executable="train_node",
-        name="trainer",
+        executable="main_train_node",
+        name="main_trainer",
         output="screen",
         emulate_tty=True,  
         parameters=[

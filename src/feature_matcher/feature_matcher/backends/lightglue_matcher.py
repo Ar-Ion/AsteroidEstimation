@@ -31,17 +31,17 @@ class LightglueMatcher(Matcher):
         
     def match(self, data):
         
-        size = torch.tensor((1024, 1024))
+        size = torch.tensor(((1024, 1024)))
 
         a_data = {
-            "keypoints": data.prev_kps[None, :, 1:3], 
-            "descriptors": data.prev_features[None, :], 
+            "keypoints": data.prev_points.kps[None, :, :], 
+            "descriptors": data.prev_points.features[None, :], 
             "image_size": size
         }
         
         b_data = {
-            "keypoints": data.next_kps[None, :, 1:3], 
-            "descriptors": data.next_features[None, :], 
+            "keypoints": data.next_points.kps[None, :, :], 
+            "descriptors": data.next_points.features[None, :], 
             "image_size": size
         }
 

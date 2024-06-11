@@ -23,7 +23,7 @@ def main(args=None):
     input_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("input").items()))
     
     frontend_wrapped = factory.instance(input_params, mode, size)
-    frontend = AsyncFrontend(frontend_wrapped, AsyncFrontend.Modes.NO_WAIT)
+    frontend = AsyncFrontend(frontend_wrapped, wait=False)
     frontend.start()
     
     verifier = Verifier(frontend, size)

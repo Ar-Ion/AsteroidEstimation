@@ -1,6 +1,7 @@
 import threading
 import multiprocessing
 import queue
+import ctypes
 
 # Make each AsyncEvent unique and comparable by memory location
 class AsyncEvent:
@@ -11,96 +12,120 @@ class AsyncEvent:
         return self._uid == other._uid
         
 class AsyncFrontend:
-    # Defines the possible events that must be passed between the sync parent process and the async child subprocess
-    class Events:
-        START = AsyncEvent("start")
-        STOP = AsyncEvent("stop")
-        FORCE_TICK = AsyncEvent("tick")
-        
-    # The mode defines if the transmit/receive pipeline should wait until the application requests to send new data
-    class Modes:
-        WAIT = 1
-        NO_WAIT = 2
 
-    def __init__(self, frontend, mode):  
+    def __init__(self, frontend, num_workers=16, wait=True, random=False):  
         self._frontend = frontend
-        self._mode = mode
+        self._wait = wait
         
-    def start(self):        
-        self._event_queue = multiprocessing.Queue(16)
-        self._data_input_queue = multiprocessing.Queue(1024)
-        self._data_output_queue = multiprocessing.Queue(1024)
+        self._resource_counter = multiprocessing.Value(ctypes.c_longlong, 0)
+        self._alive = multiprocessing.Value(ctypes.c_bool, True)    
+        self._input_queue = multiprocessing.Queue(512)
+        self._output_queue = multiprocessing.Queue(512)
+        
+        # Add affine coefficients for random number generation
+        if random:
+            # Large (co-)prime numbers (similar to Java implementation for RNG)
+            self._multiplier = 193939
+            self._offset = 199933
+        else:
+            self._multiplier = 1
+            self._offset = 1
         
         # Defines an async subprocess to speed up the data transmission/reception pipeline.
         # Arguments are passed as simple object and queues to simplify memory management.
-        self._process = threading.Thread(
-            target=AsyncFrontend.run, 
+        self._processes = []
+        
+        for i in range(num_workers):
+            self._processes.append(
+                multiprocessing.Process(
+                    target=AsyncFrontend.run_process, 
+                    args=(
+                        self._alive,
+                        self._frontend, 
+                        self._input_queue, 
+                        self._output_queue,
+                    )
+                )
+            )
+        
+        self._scheduler = threading.Thread(
+            target=AsyncFrontend.run_scheduler, 
             args=(
-                self._mode,
-                self._frontend, 
-                self._event_queue, 
-                self._data_input_queue, 
-                self._data_output_queue,
+                self._alive,
+                self._resource_counter, 
+                self._input_queue,
+                self._multiplier, 
+                self._offset
             )
         )
         
-        self._process.start() # Start the actual subprocess
-        self._event_queue.put(AsyncFrontend.Events.START) # Send the START signal to the async process
+    def start(self):
+        for process in self._processes:
+            process.start()
+        
+        if not self._wait:
+            self._scheduler.start()
         
     def stop(self):
-        self._event_queue.put(AsyncFrontend.Events.STOP) # Send the STOP signal to the async process
-        self._process.join() # and wait for it to terminate
+        
+        self._alive.value = False
+                
+        # Clear the input queue once, to allow the scheduler to terminate
+        while True:
+            try:
+                self._input_queue.get(timeout=1)
+            except queue.Empty:
+                break
 
-    def send_event(self, event):
-        self._event_queue.put(event)
+        # Stop the scheduler if active, so that nothing else gets added to the input queue
+        if not self._wait:
+            self._scheduler.join()
 
-    def on_event(frontend, data_input_queue, event):
-        if event == AsyncFrontend.Events.START:
-            frontend.on_start()
-        elif event == AsyncFrontend.Events.STOP:
-            frontend.on_stop()
-            raise InterruptedError
-        elif event == AsyncFrontend.Events.FORCE_TICK:
-            data = data_input_queue.get()
-            frontend.on_input(data)
-        else:
-            frontend.on_event(event)
-    
+        # Wait for subprocesses to terminate
+        for process in self._processes:
+            process.kill()
+            
+                            
     # The AsyncFrontend objects must be designed to have the transmission and reception systems run on a single thread.
     # A packet can only be received if the front-end transmits something, which is a weak assumption for this project
-    def run(mode, frontend, event_queue, data_input_queue, data_output_queue):
+    def run_process(alive, frontend, input_queue, output_queue):
         def rx_callback(data):
-            data_output_queue.put(data)
+            output_queue.put(data)
 
         frontend.set_receive_callback(rx_callback)
         
-        while True:
-            # Tick frontend
-            frontend.on_tick()
-
+        while alive.value:
             # Process the event queue
             try:
-                is_idle = not frontend.is_running()
-                event = event_queue.get(is_idle or mode == AsyncFrontend.Modes.WAIT)
-                AsyncFrontend.on_event(frontend, data_input_queue, event)
-            except queue.Empty:
-                pass # No new event
-            except InterruptedError:
+                input = input_queue.get()
+                
+                if input != None:
+                    frontend.on_input(input)
+            except KeyboardInterrupt:
+                break # Parent process decided to terminate the frontend
+                        
+    def run_scheduler(alive, resource_counter, input_queue, multiplier, offset):                
+        while alive.value:
+            try:
+                with resource_counter.get_lock():
+                    input_queue.put((resource_counter.value, None))
+                    resource_counter.value = resource_counter.value * multiplier + offset
+            except KeyboardInterrupt:
                 break # Parent process decided to terminate the frontend
                                        
     # Adds data to the queue, so that it will be sent soon by the async subprocess. 
     def transmit(self, data):
-        self._data_input_queue.put(data)
-        self._event_queue.put(AsyncFrontend.Events.FORCE_TICK)
+        with self._resource_counter.get_lock():
+            self._input_queue.put((self._resource_counter.value, data))
+            self._resource_counter.value = self._resource_counter.value * self._multiplier + self._offset
         
     # Fetches new data from the the async subprocess. May return None if no new data has been received.    
     def receive(self, blocking=False):
         try:
-            #print("read " + str(self._data_output_queue.qsize()))
-            return self._data_output_queue.get(blocking)
-        
+            (id, data) = self._output_queue.get(blocking)
+            return data
         except queue.Empty:
             return None
-        
+                
     def get_sync(self, index):
-        return self._frontend.get(index)
+        raise NotImplementedError()

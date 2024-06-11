@@ -1,3 +1,6 @@
 [submodule "src/feature_matcher/feature_matcher/backends/LightGlue"]
 	path = src/feature_matcher/feature_matcher/backends/LightGlue
 	url = https://github.com/cvg/LightGlue
+[submodule "src/slam/slam/pyslam"]
+	path = src/slam/slam/pyslam
+	url = https://github.com/luigifreda/pyslam.git

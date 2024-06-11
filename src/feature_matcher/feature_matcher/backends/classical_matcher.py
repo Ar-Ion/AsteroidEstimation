@@ -7,7 +7,7 @@ class ClassicalMatcher(Matcher):
         self._metric = MatchMetric.instance(metric)
         
     def match(self, data):
-        pred_dists = self._metric.dist(data.prev_features, data.next_features)
+        pred_dists = self._metric.dist(data.prev_points.features, data.next_points.features)
         pred_matches = self._criterion.apply(pred_dists)
                 
         return pred_dists, pred_matches

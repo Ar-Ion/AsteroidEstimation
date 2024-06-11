@@ -71,31 +71,31 @@ class SparseSuperPoint(ME.MinkowskiNetwork):
         out_s2 = self.conv2a(out)
         out = self.conv2b(out_s2)
         out_s4 = self.conv3a(out)
-        out = out_s4#self.conv3b(out_s4)
+        out = self.conv3b(out_s4)
         
-        # out = self.conv4(out)
-        # out = ME.cat(out, out_s4)
+        out = self.conv4(out)
+        out = ME.cat(out, out_s4)
         
-        # out = self.conv5(out)
-        # out = ME.cat(out, out_s2)
+        out = self.conv5(out)
+        out = ME.cat(out, out_s2)
         
-        # out = self.conv6(out)
-        # out = ME.cat(out, out_s1)
+        out = self.conv6(out)
+        out = ME.cat(out, out_s1)
         
-        # out = self.mlp(out)
-        # out = self.convMap(out)
+        out = self.mlp(out)
+        out = self.convMap(out)
 
-        out_coords = x.coordinates
-        out_features = self.interp(out, out_coords.to(input.features.dtype))
-                
-        out = ME.SparseTensor(out_features, out_coords)
-        
+        # out_coords = x.coordinates
+        # out_features = self.interp(out, out_coords.to(input.features.dtype))
+
+        # out = ME.SparseTensor(out_features.contiguous(), out_coords)
+
         return MF.normalize(MF.relu(out), dim=1)
 
     def create_mlp(self, nin, nout):
         return nn.Sequential(
             ME.MinkowskiLinear(nin, nout, bias=False),
-            ME.MinkowskiBatchNorm(nout),
+            ME.MinkowskiInstanceNorm(nout),
             ME.MinkowskiReLU()
         )
         
@@ -116,7 +116,7 @@ class SparseSuperPoint(ME.MinkowskiNetwork):
                 dimension=self._D
             ),
             ME.MinkowskiReLU(),
-            ME.MinkowskiBatchNorm(nout)
+            ME.MinkowskiInstanceNorm(nout)
         )
     
     def create_downsampling_conv(self, nin, nout):
@@ -133,7 +133,7 @@ class SparseSuperPoint(ME.MinkowskiNetwork):
                 dimension=self._D
             ),
             ME.MinkowskiReLU(),
-            ME.MinkowskiBatchNorm(nout)
+            ME.MinkowskiInstanceNorm(nout)
         )
     
     def create_upsampling_conv(self, nin, nout):
@@ -150,7 +150,7 @@ class SparseSuperPoint(ME.MinkowskiNetwork):
                 dimension=self._D
             ),
             ME.MinkowskiReLU(),
-            ME.MinkowskiBatchNorm(nout)
+            ME.MinkowskiInstanceNorm(nout)
         )
     
     def create_mapping_conv(self, nin, nout):
@@ -163,7 +163,7 @@ class SparseSuperPoint(ME.MinkowskiNetwork):
                 bias=True
             ),
             ME.MinkowskiReLU(),
-            ME.MinkowskiBatchNorm(nout)
+            ME.MinkowskiInstanceNorm(nout)
         )
     
 # class SparseSuperPoint(ME.MinkowskiNetwork):

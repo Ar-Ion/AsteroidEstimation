@@ -10,6 +10,5 @@ class AKAZEBackend(Backend):
         self._extractor = cv2.AKAZE_create()
 
     def detect_features(self, image):
-        kps, dess = self._extractor.detectAndCompute(image, None)
-        coords = torch.tensor(map(kps, lambda x: x.pt))
-        return (coords, dess)
+        (kp, dess) = self._extractor.detectAndCompute(image, None)
+        return (torch.tensor(list(map(lambda x: (x.pt[1], x.pt[0]), kp)), dtype=torch.int), torch.from_numpy(dess))

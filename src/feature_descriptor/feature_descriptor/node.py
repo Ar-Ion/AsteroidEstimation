@@ -25,7 +25,8 @@ def main(args=None):
     node.declare_parameters("", [
         ("descriptor_config.backend", rclpy.Parameter.Type.STRING),
         ("descriptor_config.model_type", rclpy.Parameter.Type.STRING),
-        ("descriptor_config.model_path", rclpy.Parameter.Type.STRING),
+        ("descriptor_config.filter_model_path", rclpy.Parameter.Type.STRING),
+        ("descriptor_config.descriptor_model_path", rclpy.Parameter.Type.STRING),
         ("descriptor_config.autoload", rclpy.Parameter.Type.BOOL),
         ("descriptor_config.design_param", rclpy.Parameter.Type.INTEGER),
         ("descriptor_config.max_features", rclpy.Parameter.Type.INTEGER),
@@ -40,8 +41,8 @@ def main(args=None):
     client_wrapped = astronet_frontends.factory.instance(input_params, mode, size)
     server_wrapped = astronet_frontends.factory.instance(output_params, mode, size)
 
-    client = AsyncFrontend(client_wrapped, AsyncFrontend.Modes.NO_WAIT)
-    server = AsyncFrontend(server_wrapped, AsyncFrontend.Modes.WAIT)
+    client = AsyncFrontend(client_wrapped, wait=False, num_workers=1) # Preserve input order by using a single worker (slower though)
+    server = AsyncFrontend(server_wrapped)
 
     client.start()
     server.start()

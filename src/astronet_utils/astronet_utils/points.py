@@ -14,16 +14,22 @@ class PointsUtils(Batchable, Torchable, Chunkable):
         kps = points_data.kps[filter]
         depths = points_data.depths[filter]
         features = points_data.features[filter]
-        proj = points_data.proj[filter]
+        proj = points_data.proj
         
-        return MotionData.PointsData(kps, depths, features, proj)
+        return MotionData.PointsData(
+            kps, 
+            depths, 
+            features, 
+            proj,
+            points_data.num_batches
+        )
     
     # Compliance with Torchable abstraction
     def to(points_data, device=None, dtype=None):
         kps = points_data.kps.to(device=device)
         depths = points_data.depths.to(device=device)
         features = points_data.features.to(device=device, dtype=dtype)
-        proj = ProjectionUtils.to(points_data.proj, device=device)
+        proj = ProjectionUtils.to(points_data.proj, device=device, dtype=dtype)
 
         return MotionData.PointsData(
             kps, 
@@ -72,7 +78,7 @@ class PointsUtils(Batchable, Torchable, Chunkable):
         kps = points_data.kps[filter, 1:3]
         depths = points_data.depths[filter]
         features = points_data.features[filter]
-        proj = points_data.proj[filter]
+        proj = ProjectionUtils.retrieve(points_data.proj, index)
 
         return MotionData.PointsData(kps, depths, features, proj)
         
@@ -91,13 +97,12 @@ class PointsUtils(Batchable, Torchable, Chunkable):
         for chunk_id in range(num_chunks):
             filter = (chunk_ids == chunk_id)
                         
-            if filter.count_nonzero() > 0:
-                kps = points_data.kps[filter]
-                depths = points_data.depths[filter]
-                features = points_data.features[filter]
-                proj = points_data.proj
-                
-                out_data.append(MotionData.PointsData(kps, depths, features, proj))
+            kps = points_data.kps[filter]
+            depths = points_data.depths[filter]
+            features = points_data.features[filter]
+            proj = points_data.proj
+            
+            out_data.append(MotionData.PointsData(kps, depths, features, proj))
 
         return out_data
     

@@ -26,6 +26,16 @@ def main(args=None):
         ("output.type", rclpy.Parameter.Type.STRING),
         ("output.path", rclpy.Parameter.Type.STRING)
     ])
+    
+    node.declare_parameters("", [
+        ("config.keypoints.metric", rclpy.Parameter.Type.STRING),
+        ("config.keypoints.criterion", rclpy.Parameter.Type.STRING),
+        ("config.keypoints.criterion_args", rclpy.Parameter.Type.DOUBLE_ARRAY),
+        ("config.features.matcher", rclpy.Parameter.Type.STRING),
+        ("config.features.matcher_args", rclpy.Parameter.Type.STRING_ARRAY),
+        ("config.features.criterion", rclpy.Parameter.Type.STRING),
+        ("config.features.criterion_args", rclpy.Parameter.Type.DOUBLE_ARRAY)
+    ])
 
     size = node.get_parameter("size").value
     mode = node.get_parameter("mode").value
@@ -33,7 +43,7 @@ def main(args=None):
     output_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("output").items()))
 
     frontend_wrapped = astronet_frontends.factory.instance(input_params, mode, size)
-    frontend = AsyncFrontend(frontend_wrapped, AsyncFrontend.Modes.NO_WAIT)
+    frontend = AsyncFrontend(frontend_wrapped, wait=False)
     frontend.start()
 
     matcher = ClassicalMatcher(Cosine, GreaterThan(0.75))

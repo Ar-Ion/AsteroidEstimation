@@ -6,8 +6,6 @@ class DriveServerFrontend(Frontend):
     def __init__(self, source, mode, size):
         super().__init__(source, mode, size)
 
-        self._current = 0
-
         self._output_dir = os.path.join(self.source, self.mode)
         os.makedirs(self._output_dir, exist_ok=True)
         
@@ -16,15 +14,13 @@ class DriveServerFrontend(Frontend):
             
     def on_stop(self):
         print("Drive server frontend stopped")
+
+    def on_input(self, input):
+        resource_id, data = input
+        id = resource_id % self.size
         
-    def is_running(self):
-        return self._current < self.size
+        filename = os.path.join(self._output_dir, str(id).zfill(6) + ".pickle")
 
-    def on_input(self, data):
-        if self._current < self.size:
-            filename = os.path.join(self._output_dir, str(self._current).zfill(6) + ".pickle")
-            self._current += 1
-
-            with open(filename, 'wb') as handle:
-                pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        with open(filename, 'wb') as handle:
+            pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
         

@@ -497,8 +497,8 @@ class LightGlue(nn.Module):
             kpts1 = torch.cat(
                 [kpts1] + [data1[k].unsqueeze(-1) for k in ("scales", "oris")], -1
             )
-        desc0 = data0["descriptors"].detach().contiguous()
-        desc1 = data1["descriptors"].detach().contiguous()
+        desc0 = data0["descriptors"].contiguous()
+        desc1 = data1["descriptors"].contiguous()
 
         assert desc0.shape[-1] == self.conf.input_dim
         assert desc1.shape[-1] == self.conf.input_dim

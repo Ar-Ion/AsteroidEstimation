@@ -1,5 +1,6 @@
 import os
 import torch
+import numpy as np
 from torch.utils.cpp_extension import load
 from ament_index_python.packages import get_package_share_directory
 from matplotlib import pyplot as plt
@@ -29,7 +30,7 @@ class UntrainedCOFFEEBackend(Backend):
         if backend_params["design_param"]:
             self._threshold = int(backend_params["design_param"])
         else:
-            self._threshold = 100
+            self._threshold = 50
             
         if backend_params["max_features"]:
             self._max_features = int(backend_params["max_features"])
@@ -46,7 +47,7 @@ class UntrainedCOFFEEBackend(Backend):
         #plt.imshow(image, cmap='gray', vmin=0, vmax=255)
         
         # Convert to GPU tensor
-        gpu_image = torch.from_numpy(image).to(self._device).short()
+        gpu_image = torch.from_numpy(image).to(self._device).contiguous().short()
         
         # Preprocessing and dimension reduction
         sparse_repr = self._coffee_cuda.sparsify(gpu_image)
@@ -70,12 +71,12 @@ class UntrainedCOFFEEBackend(Backend):
             coords = coords[:, most_relevant.indices]
             features = features[most_relevant.indices]
             
-        #plt.figure()
-        #plt.imshow(image, cmap='gray', vmin=0, vmax=255)
-        #plt.scatter(coords[1, :], coords[0, :], s=0.1)
-        #plt.xlim(0, 1024)
-        #plt.ylim(1024, 0)
-        #plt.show()
+        # plt.figure()
+        # plt.imshow(image, cmap='gray', vmin=0, vmax=255)
+        # plt.scatter(coords[1, :].cpu(), coords[0, :].cpu(), s=0.1)
+        # plt.xlim(0, 1024)
+        # plt.ylim(1024, 0)
+        # plt.show()
         
         return (coords.T, features[:, None])
         

@@ -44,7 +44,7 @@ def main(args=None):
         raise NotImplementedError("Supported outputs only include 'Plots'")
 
     frontend_wrapped = astronet_frontends.factory.instance(input_params, mode, size)
-    frontend = AsyncFrontend(frontend_wrapped, AsyncFrontend.Modes.NO_WAIT)
+    frontend = AsyncFrontend(frontend_wrapped, wait=False)
     frontend.start()
 
     simple_stats = SimpleStats(frontend, size, config)

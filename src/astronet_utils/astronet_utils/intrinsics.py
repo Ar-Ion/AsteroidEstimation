@@ -1,9 +1,9 @@
 import torch
 
 from astronet_msgs import ProjectionData
-from .abstractions import Batchable, Torchable
+from .abstractions import Batchable, Torchable, Filterable
 
-class IntrinsicsUtils(Batchable, Torchable):
+class IntrinsicsUtils(Batchable, Torchable, Filterable):
     # Constructor helpers
     def from_K(k):
         K = torch.from_numpy(k).float()
@@ -19,7 +19,7 @@ class IntrinsicsUtils(Batchable, Torchable):
         ndc = torch.einsum("ij,...jl->...il", intrinsics.K, point)
         
         # Then, normalize the coordinates by the depth
-        return torch.hstack((ndc[:, 0]/ndc[:, 2], ndc[:, 1]/ndc[:, 2], ndc[:, 2]))
+        return torch.hstack((ndc[:, 0]/ndc[:, 2], ndc[:, 1]/ndc[:, 2], ndc[:, 2])).reshape(-1, 3)
 
     def revert(intrinsics, point):
         # Add a dimension to point to facilitate broadcasting
@@ -32,7 +32,7 @@ class IntrinsicsUtils(Batchable, Torchable):
         ndc = torch.einsum("ij,...j->...i", intrinsics.K_inv, uv)
 
         # Finally, we add back the depth information by normalizing the NDC coordinates
-        return ndc * point[:, 2]
+        return (ndc * point[:, 2]).reshape(-1, 3)
       
     # Compliance with Torchable abstraction
     def to(intrinsics, device=None, dtype=None):
@@ -40,10 +40,16 @@ class IntrinsicsUtils(Batchable, Torchable):
         K_inv = intrinsics.K_inv.to(device=device, dtype=dtype)
         return ProjectionData.IntrinsicsData(K, K_inv)
         
-    def detach(extrinsics):
-        K = K.detach()
-        K_inv = K_inv.detach()
-        return ProjectionData.ExtrinsicsData(K, K_inv)
+    def detach(intrinsics):
+        K = intrinsics.K.detach()
+        K_inv = intrinsics.K_inv.detach()
+        return ProjectionData.IntrinsicsData(K, K_inv)
+    
+    # Compliance with Filterable abstraction
+    def filter(intrinsics, filter):
+        K = intrinsics.K[filter]
+        K_inv = intrinsics.K_inv[filter]
+        return ProjectionData.IntrinsicsData(K, K_inv)
     
     # Compliance with Batchable abstraction
     def batched(instrinsics_data_list):
@@ -56,7 +62,7 @@ class IntrinsicsUtils(Batchable, Torchable):
         batched_K = torch.stack(collated_K)
         batched_K_inv = torch.stack(collated_K_inv)
         
-        return ProjectionData.ExtrinsicsData(batched_K, batched_K_inv, num_batches)
+        return ProjectionData.IntrinsicsData(batched_K, batched_K_inv, num_batches)
         
     def retrieve(intrinsics_data, index):
         K = intrinsics_data.K[index, :]

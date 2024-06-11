@@ -1,6 +1,7 @@
 import torch
 
 from benchmark.statistics import Statistics
+from astronet_utils import ProjectionUtils, PointsUtils
 
 from .metrics import L2
 from .criteria import LessThan
@@ -27,8 +28,15 @@ class Backend:
 
         while count < self._size:
             data = self._frontend.receive(blocking=True)
+            
+            prev_points_2D = PointsUtils.to(data.prev_points, device=self._device)
+            next_points_2D = PointsUtils.to(data.next_points, device=self._device)
+            prev_points_25D = torch.hstack((prev_points_2D.kps, prev_points_2D.depths[:, None]))
+            world_points_3D = ProjectionUtils.camera2object(prev_points_2D.proj, prev_points_25D)
+            reproj_points_25D = ProjectionUtils.object2camera(next_points_2D.proj, world_points_3D)
+            reproj_points_2D = reproj_points_25D[:, 0:2]
 
-            true_dists = self._keypoints_metric.dist(data.proj_kps, data.next_kps)
+            true_dists = self._keypoints_metric.dist(reproj_points_2D, next_points_2D.kps)
             true_matches = self._keypoints_criterion.apply(true_dists)
             
             pred_dists, pred_matches = self._matcher.match(data)

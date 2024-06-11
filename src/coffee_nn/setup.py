@@ -22,7 +22,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'train_node = coffee_nn.train_node:main'
+            'main_train_node = coffee_nn.main_train_node:main',
+            'filter_train_node = coffee_nn.filter_train_node:main'
         ],
     },
 )

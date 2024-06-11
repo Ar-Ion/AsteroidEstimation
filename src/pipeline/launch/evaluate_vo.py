@@ -34,7 +34,7 @@ def create_nodes(context, run_params, dataset_params):
     size = context.perform_substitution(run_params["size"])
     skip_synthesis = context.perform_substitution(run_params["skip_synthesis"])
     
-    benchmarker_params = os.path.join(get_package_share_directory('pipeline'), 'config', backend + '.yaml')
+    matcher_params = os.path.join(get_package_share_directory('pipeline'), 'config', backend + '.yaml')
 
     descriptor_io_override = {
         "output.path": eval_dir + "/" + backend + "/Features"
@@ -50,10 +50,15 @@ def create_nodes(context, run_params, dataset_params):
         "output.path": eval_dir + "/" + backend + "/Benchmark"
     }
     
+    vo_io_override = {
+        "input.path": eval_dir + "/" + backend + "/Motion",
+        "output.path": eval_dir + "/" + backend + "/VisualOdometry"
+    }
+    
     size_override = {
         "size": int(int(size)/2),
     }
-    
+
     descriptor = Node(
         package="feature_descriptor",
         executable="node",
@@ -69,7 +74,7 @@ def create_nodes(context, run_params, dataset_params):
 
     synthesizer = Node(
         package="motion_synthesizer",
-        executable="node",
+        executable="generate",
         name="eval_synthesizer",
         output="screen",
         emulate_tty=True,
@@ -79,30 +84,32 @@ def create_nodes(context, run_params, dataset_params):
             synthesizer_io_override
         ]
     )
-
-    benchmarker = Node(
-        package="benchmark",
+    
+    vo = Node(
+        package="visual_odometry",
         executable="node",
-        name="eval_benchmarker",
+        name="eval_vo",
         output="screen",
         emulate_tty=True,
         parameters=[
             run_params,
             dataset_params,
-            benchmarker_params,
-            benchmarker_io_override,
+            matcher_params,
+            vo_io_override,
             size_override
         ]
     )
     
     if skip_synthesis != "False":
-        return [benchmarker]
+        return [
+            vo
+        ]
     else:
         return [
             RegisterEventHandler(
                 OnExecutionComplete(
                     target_action=synthesizer,
-                    on_completion=[benchmarker]
+                    on_completion=[vo]
                 )
             ),
             RegisterEventHandler(

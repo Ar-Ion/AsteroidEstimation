@@ -12,6 +12,14 @@ eval_benchmarker:
         criterion: "LessThan"
         criterion_args: [170.0]
 
+eval_vo:
+  ros__parameters: 
+    config:
+      matcher: "ClassicalMatcher"
+      matcher_args: ["L2"]
+      criterion: "MinRatio"
+      criterion_args: [0.85]
+
       # features:
       #   metric: "L2"
       #   criterion: "LowerThan"

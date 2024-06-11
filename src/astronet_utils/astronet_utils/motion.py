@@ -10,7 +10,7 @@ class MotionUtils(Batchable, Torchable, Chunkable):
     def stash(motion_data, predicate):
         prev_points = PointsUtils.stash(motion_data.prev_points, predicate)
         next_points = PointsUtils.stash(motion_data.next_points, predicate)
-        return MotionData(prev_points, next_points)
+        return MotionData(prev_points, next_points, num_batches=motion_data.num_batches)
     
     # Two features are matchables iif their distance is less than one and they are mutual nearest neighbours
     def stash_unmatchables(motion_data):
@@ -29,7 +29,7 @@ class MotionUtils(Batchable, Torchable, Chunkable):
         
         return MotionData(prev_points, next_points)
 
-    # Checks if the match matrix is at least 16x16, for better stability of the matching algorithm
+    # Checks if the match matrix is at least 256x256, for better stability of the matching algorithm
     def is_valid(motion_data):
         return min(len(motion_data.prev_points.features), len(motion_data.next_points.features)) > 16
 

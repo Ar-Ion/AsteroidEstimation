@@ -9,12 +9,12 @@ class SuperglueMatcher(Matcher):
     def match(self, data):
 
         output = self._model({
-            "keypoints0": data.prev_kps, 
-            "keypoints1": data.next_kps, 
-            "descriptors0": data.prev_features,
-            "descriptors1": data.next_features,
-            "scores0": torch.ones((len(data.prev_features)))[:, None],
-            "scores1": torch.ones((len(data.next_features)))[:, None],
+            "keypoints0": data.prev_points.kps, 
+            "keypoints1": data.next_points.kps, 
+            "descriptors0": data.prev_points.features,
+            "descriptors1": data.next_points.features,
+            "scores0": torch.ones((len(data.prev_points.features)))[:, None],
+            "scores1": torch.ones((len(data.next_points.features)))[:, None],
             "image_shape": (0, 0, 1024, 1024)
         })[0, :, :]
         

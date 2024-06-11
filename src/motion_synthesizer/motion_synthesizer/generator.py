@@ -40,10 +40,6 @@ class MotionGenerator:
         count = 0
         
         while count < self._output_size:
-            if count != 0 and count*2 % self._input_size == 0:
-                # We have iterated through the whole input dataset. The data must be reshuffled.
-                self._client.send_event(DriveClientFrontend.Events.RESET)
-        
             data1 = self._client.receive(blocking=True)
             data2 = self._client.receive(blocking=True)
             

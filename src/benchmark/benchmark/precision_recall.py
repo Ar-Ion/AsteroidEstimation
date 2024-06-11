@@ -1,13 +1,13 @@
 import torch
-import random
-from .statistics import Statistics
+from matplotlib import pyplot as plt
+
 from feature_matcher.backends.criteria import MatchCriterion
 from feature_matcher.backends.metrics import MatchMetric
 from feature_matcher.backends import Matcher
-
-from astronet_msgs import BatchedMotionData
+from astronet_utils import MotionUtils, PointsUtils, ProjectionUtils
 from astronet_frontends import DriveClientFrontend
-from matplotlib import pyplot as plt
+
+from .statistics import Statistics
 
 class PrecisionRecall:
     def __init__(self, frontend, size, config):
@@ -47,22 +47,26 @@ class PrecisionRecall:
             
             param = param_sweep[param_idx]
             
-            self._frontend.send_event(DriveClientFrontend.Events.RESET)
-
             stats = []
             count = 0
 
             while count < self._size:
                 input = self._frontend.receive(blocking=True)
-                chunks = input.to(self._device).create_chunks(1024, 1024)
-
-                valid_chunks = list(filter(lambda x: x.is_valid(), chunks))
                 
-                batch = BatchedMotionData.from_list(valid_chunks).to(self._device)
-                    
-                for idx in range(batch.num_batches):
-                    data = batch.retrieve(idx)
-                    true_dists = self._keypoints_metric.dist(data.proj_kps, data.next_kps)
+                chunks = MotionUtils.create_chunks(input, 1024, 1024)                        
+                valid_chunks = list(filter(MotionUtils.is_valid, chunks))
+                valid_batch = MotionUtils.batched(valid_chunks)
+                valid_batch_gpu = MotionUtils.to(valid_batch, device=self._device)
+                                    
+                for idx in range(valid_batch_gpu.num_batches):
+                    data = MotionUtils.retrieve(valid_batch_gpu, idx)
+                
+                    prev_points_25D = torch.hstack((data.prev_points.kps, data.prev_points.depths[:, None]))
+                    world_points_3D = ProjectionUtils.camera2object(data.prev_points.proj, prev_points_25D)
+                    reproj_points_25D = ProjectionUtils.object2camera(data.next_points.proj, world_points_3D)
+                    reproj_points_2D = reproj_points_25D[:, 0:2]
+
+                    true_dists = self._keypoints_metric.dist(reproj_points_2D, data.next_points.kps)
                     true_matches = self._keypoints_criterion.apply(true_dists)
                     
                     features_criterion = MatchCriterion.instance(self._matcher_criterion, param)

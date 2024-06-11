@@ -29,8 +29,8 @@ def main(args=None):
     client_wrapped = factory.instance(input_params, mode, size)
     server_wrapped = factory.instance(output_params, mode, size//2) # Each output motion requires two input images
     
-    client = AsyncFrontend(client_wrapped, AsyncFrontend.Modes.NO_WAIT)
-    server = AsyncFrontend(server_wrapped, AsyncFrontend.Modes.WAIT)
+    client = AsyncFrontend(client_wrapped, wait=False, num_workers=1)
+    server = AsyncFrontend(server_wrapped)
 
     client.start()
     server.start()
