@@ -21,9 +21,9 @@ class MainTrainer(Trainer):
         train_dp = TrainDataProvider(train_frontend, int(train_size))
         validate_dp = TrainDataProvider(validate_frontend, int(validate_size))
         
-        self._train_coarse_descriptor_phase = TrainPhase(train_dp, validate_dp, 8, 256, 20) # Active for 1/8 epoch
-        self._train_coarse_matcher_phase = TrainPhase(train_dp, validate_dp, 32, 64, 2) # Active for 1/8 epoch
-        self._train_fine_phase = TrainPhase(train_dp, validate_dp, 32, 64, 100) # Active for 10 epochs
+        self._train_coarse_descriptor_phase = TrainPhase(train_dp, validate_dp, 128, 32, 0) # Active for 1/8 epoch
+        self._train_coarse_matcher_phase = TrainPhase(train_dp, validate_dp, 512, 8, 0) # Active for 1/8 epoch
+        self._train_fine_phase = TrainPhase(train_dp, validate_dp, 512, 8, 100) # Active for 10 epochs
 
         self._train_coarse_descriptor_phase.set_next(self._train_coarse_matcher_phase)
         self._train_coarse_matcher_phase.set_next(self._train_fine_phase)
@@ -35,30 +35,33 @@ class MainTrainer(Trainer):
         self._filter = COFFEEFilter(autoload=True, **filter_params)
 
         # Call parent constructor
-        super().__init__([self._descriptor, self._matcher], self._train_coarse_descriptor_phase)
+        super().__init__([self._descriptor, self._matcher], self._train_coarse_descriptor_phase, lr=0.0001, gamma=0.999)
 
         ## Loss function metrics 
         self._loss_match = CrossEntropyLoss()
-        self._loss_desc = HingeLoss(0.5, 0.01)
+        self._loss_desc = HingeLoss(0.4, 0.1)
         self._keypoints_metric = L2
-        self._keypoints_criterion = LessThan(1.0)
-        self._matcher_warmup = ClassicalMatcher(criterion=GreaterThan(0.5), metric="Cosine") # This matcher is used to help the model converge
+        self._keypoints_criterion = Intersection(MinRatio(1.0), LessThan(1.41))
+        self._matcher_warmup = ClassicalMatcher(criterion=GreaterThan(0.75), metric="Cosine") # This matcher is used to help the model converge
         
     ## Forward pass methods
     # Forwards a batch to the model
-    def forward(self, batch):         
-        batch.prev_points = self._filter.apply(batch.prev_points)
-        batch.next_points = self._filter.apply(batch.next_points)
+    def forward(self, batch):    
+        # Filter forward (not training)
+        #batch.prev_points = self._filter.apply_points(batch.prev_points)
+        #batch.next_points = self._filter.apply_points(batch.next_points)
+        
+        # Descriptor forward (training)
         batch_output = self._descriptor.forward_motion(batch)
         
         batch_loss = 0
         batch_normalization = 0
 
         batch_stats = []
-                    
+                            
         for idx in range(batch_output.num_batches):
             output = MotionUtils.retrieve(batch_output, idx)
-        
+            
             prev_points_25D = torch.hstack((output.prev_points.kps, output.prev_points.depths[:, None]))
             world_points_3D = ProjectionUtils.camera2object(output.prev_points.proj, prev_points_25D)
             reproj_points_25D = ProjectionUtils.object2camera(output.next_points.proj, world_points_3D)
@@ -66,7 +69,7 @@ class MainTrainer(Trainer):
 
             true_dists = self._keypoints_metric.dist(reproj_points_2D, output.next_points.kps)
             true_matches = self._keypoints_criterion.apply(true_dists)
-            
+
             if self._phase == self._train_coarse_descriptor_phase:
                 pred_dists, pred_matches = self._matcher_warmup.match(output)
                 loss, normalization = self._loss_desc.loss(true_dists, true_matches, pred_dists, pred_matches)

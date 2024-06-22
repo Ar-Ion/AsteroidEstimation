@@ -36,11 +36,11 @@ def main(args=None):
     filter_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("filter_config").items()))
 
     train_frontend_wrapped = factory.instance(input_params, "train", train_size)
-    train_frontend = AsyncFrontend(train_frontend_wrapped, wait=False, random=True)
+    train_frontend = AsyncFrontend(train_frontend_wrapped, wait=False, is_random=True)
     train_frontend.start()
     
     validate_frontend_wrapped = factory.instance(input_params, "validate", validate_size)
-    validate_frontend = AsyncFrontend(validate_frontend_wrapped, wait=False, random=True)
+    validate_frontend = AsyncFrontend(validate_frontend_wrapped, wait=False, is_random=True)
     validate_frontend.start()
     
     backend = MainTrainer(train_frontend, validate_frontend, int(train_size), int(validate_size), descriptor_params, matcher_params, filter_params)

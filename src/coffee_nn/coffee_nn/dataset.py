@@ -12,7 +12,9 @@ class AsteroidMotionDataset(Dataset):
         
     # The index is not important as the data is shuffled by the frontend directly
     def __getitem__(self, index):
-        return self._frontend.receive(blocking=True)
+        item = self._frontend.receive(blocking=True)
+        transformed = MotionUtils.transform(item, self._transform)
+        return transformed
 
     def __len__(self):
         return self._size
@@ -25,9 +27,9 @@ class AsteroidMotionDataset(Dataset):
         #     chunked_data = MotionUtils.create_chunks(gpu_data, 1024, 1024)
         #     chunks.extend(chunked_data)
         
-        # valid_chunks = list(filter(MotionUtils.is_valid, chunks))
+        valid_chunks = list(filter(MotionUtils.is_valid, lst))
                         
-        return MotionUtils.batched(lst)
+        return MotionUtils.batched(valid_chunks)
     
     def _collate_for_training(lst):
         return AsteroidMotionDataset._collate(lst, False)
@@ -43,8 +45,7 @@ class AsteroidMotionDataset(Dataset):
                 num_workers=8,
                 shuffle=False, 
                 collate_fn=AsteroidMotionDataset._collate_for_evaluation,
-                drop_last=drop_last,
-                pin_memory=True
+                drop_last=drop_last
             )
         else:
             return DataLoader(
@@ -53,6 +54,5 @@ class AsteroidMotionDataset(Dataset):
                 num_workers=8,
                 shuffle=False, 
                 collate_fn=AsteroidMotionDataset._collate_for_training,
-                drop_last=drop_last,
-                pin_memory=True
+                drop_last=drop_last
             )

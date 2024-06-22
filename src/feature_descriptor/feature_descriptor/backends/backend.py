@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from matplotlib import pyplot as plt
 from abc import ABC, abstractmethod
 from astronet_msgs import FeatureData
 
@@ -21,6 +22,13 @@ class Backend(ABC):
             
             coords_cpu = coords.cpu()
             features_cpu = features.cpu()
+            
+            # plt.figure()
+            # plt.imshow(camera_data.image, cmap='gray', vmin=0, vmax=255)
+            # plt.scatter(coords_cpu[:, 1], coords_cpu[:, 0], s=1, c='#00ff00')
+            # plt.xlim(0, 1024)
+            # plt.ylim(1024, 0)
+            # plt.show()
             
             depth_np = camera_data.depth[coords_cpu[:, 0], coords_cpu[:, 1]]
             

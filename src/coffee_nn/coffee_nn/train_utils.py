@@ -10,10 +10,13 @@ class TrainPhase:
         iter_train_size = train_dp.size // iter_ratio
         iter_validate_size = validate_dp.size // iter_ratio
         
-        train_dataset = AsteroidMotionDataset(train_dp.frontend, iter_train_size)
-        validate_dataset = AsteroidMotionDataset(validate_dp.frontend, iter_validate_size)
+        #normalization = lambda x: (x - 1.458) / 0.2087 # This one is for 1024 input dim
+        normalization = lambda x: (x - 1.458) / 0.2087 # This one is for 256 input dim
+      
+        train_dataset = AsteroidMotionDataset(train_dp.frontend, iter_train_size, transform=normalization)
+        validate_dataset = AsteroidMotionDataset(validate_dp.frontend, iter_validate_size, transform=normalization)
         
-        self.train_dataloader = AsteroidMotionDataset.DataLoader(train_dataset, min(batch_size, iter_train_size), evaluate=True)
+        self.train_dataloader = AsteroidMotionDataset.DataLoader(train_dataset, min(batch_size, iter_train_size), evaluate=False)
         self.validate_dataloader = AsteroidMotionDataset.DataLoader(validate_dataset, min(batch_size, iter_validate_size), evaluate=True)
         
         self._iters_active = int(epochs_active * iter_ratio)

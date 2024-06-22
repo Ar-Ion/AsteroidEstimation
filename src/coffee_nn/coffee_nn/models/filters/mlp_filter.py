@@ -12,7 +12,10 @@ class SparseFilter(ME.MinkowskiNetwork):
                 
         self.mlp1 = self.create_mlp(3, 64)
         self.mlp2 = self.create_mlps(64, 8)
-        self.mlp3 = self.create_mlp(64, 1)
+        self.mlp3 = nn.Sequential( # Third layer without activation (handled by the loss function)
+            ME.MinkowskiLinear(64, 1, bias=True),
+            ME.MinkowskiBatchNorm(1)
+        )
         
     def forward(self, x):
 

@@ -17,5 +17,5 @@ class HingeLoss(LossFunction):
         
         hinge_loss = self._weight*maximum_match_count*fn_loss.sum() + fp_loss.sum()
 
-        return hinge_loss, maximum_match_count#true_dists.shape[0]*true_dists.shape[1]/10000
+        return hinge_loss, maximum_match_count
     

@@ -82,9 +82,9 @@ class PrecisionRecall:
 
             print("Precision-recall sweep status: " + f"{param_idx/len(param_sweep):.0%}")
 
-            avg_precision = torch.tensor(list(map(lambda x: x.precision(), stats))).mean()
-            avg_recall = torch.tensor(list(map(lambda x: x.recall(), stats))).mean()
-            avg_f1 = torch.tensor(list(map(lambda x: x.f1(), stats))).mean()
+            avg_precision = torch.tensor(list(map(lambda x: x.precision(), stats))).nanmean()
+            avg_recall = torch.tensor(list(map(lambda x: x.recall(), stats))).nanmean()
+            avg_f1 = torch.tensor(list(map(lambda x: x.f1(), stats))).nanmean()
 
             precision_recall.append(torch.tensor((avg_recall, avg_precision)))
             f1.append(torch.tensor((param, avg_f1)))

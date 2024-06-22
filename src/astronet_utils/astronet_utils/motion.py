@@ -3,15 +3,16 @@ import MinkowskiEngine as ME
 
 from astronet_msgs import MotionData
 from .points import PointsUtils
-from .abstractions import Batchable, Torchable, Chunkable
+from .abstractions import Transformable, Batchable, Torchable, Chunkable
 
-class MotionUtils(Batchable, Torchable, Chunkable):
+class MotionUtils(Transformable, Batchable, Torchable, Chunkable):
+    
     # Filtering functionalities
     def stash(motion_data, predicate):
         prev_points = PointsUtils.stash(motion_data.prev_points, predicate)
         next_points = PointsUtils.stash(motion_data.next_points, predicate)
         return MotionData(prev_points, next_points, num_batches=motion_data.num_batches)
-    
+        
     # Two features are matchables iif their distance is less than one and they are mutual nearest neighbours
     def stash_unmatchables(motion_data):
         assert motion_data.num_batches == -1 # Unsupported if data is already batched
@@ -31,7 +32,13 @@ class MotionUtils(Batchable, Torchable, Chunkable):
 
     # Checks if the match matrix is at least 256x256, for better stability of the matching algorithm
     def is_valid(motion_data):
-        return min(len(motion_data.prev_points.features), len(motion_data.next_points.features)) > 16
+        return min(len(motion_data.prev_points.features), len(motion_data.next_points.features)) > 64
+
+    # Compliance with Transformable abstraction
+    def transform(motion_data, func):
+        prev_points = PointsUtils.transform(motion_data.prev_points, func)
+        next_points = PointsUtils.transform(motion_data.next_points, func)
+        return MotionData(prev_points, next_points, num_batches=motion_data.num_batches)
 
     # Compliance with Torchable abstraction
     def to(motion_data, device=None, dtype=None):

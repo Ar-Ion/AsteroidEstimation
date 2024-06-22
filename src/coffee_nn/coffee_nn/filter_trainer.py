@@ -27,17 +27,17 @@ class FilterTrainer(Trainer):
         self._filter = COFFEEFilter(autoload=False, **filter_params)
 
         # Call parent constructor
-        super().__init__([self._filter], self._normal_phase, lr=0.001)
+        super().__init__([self._filter], self._normal_phase, lr=0.0001)
 
         ## Loss function metrics 
-        self._loss = torch.nn.BCEWithLogitsLoss(pos_weight=torch.tensor(10))
+        self._loss = torch.nn.BCEWithLogitsLoss(pos_weight=torch.tensor(30))
         self._keypoints_metric = L2
         self._keypoints_criterion = LessThan(1.0)
     
     ## Forward pass methods
     # Forwards a batch to the model
     def forward(self, batch):                     
-        batch_output = self.model.forward_motion(batch)
+        batch_output = self._filter.forward_motion(batch)
         
         batch_loss = 0
         batch_normalization = 0
@@ -58,7 +58,7 @@ class FilterTrainer(Trainer):
             valid_kps = torch.any(true_matches, dim=1).to(dtype=torch.float)
             model_output = output.prev_points.features.squeeze()
 
-            model_results = (torch.nn.functional.sigmoid(model_output) > 0.9).to(dtype=torch.int)    
+            model_results = (torch.nn.functional.sigmoid(model_output) > COFFEEFilter.THRESHOLD).to(dtype=torch.int)    
 
             loss = self._loss(model_output, valid_kps)
             

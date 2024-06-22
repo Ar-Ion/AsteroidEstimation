@@ -26,8 +26,8 @@ class Trainer(ABC):
         self._logger = Logger("@".join(names))
                 
         # Optimizer instantiation
-        param_lists = [model_container.model.parameters() for model_container in model_containers]
-        self._optimizer = torch.optim.Adam(chain(*param_lists) , lr=lr, weight_decay=weight_decay)
+        self._params = chain(*[model_container.model.parameters() for model_container in model_containers])
+        self._optimizer = torch.optim.Adam(self._params , lr=lr, weight_decay=weight_decay)
         self._scheduler = torch.optim.lr_scheduler.ExponentialLR(self._optimizer, gamma=gamma)
                 
     # Main loop. Called by the ROS node. Supposedly trains the neural network.
@@ -39,7 +39,7 @@ class Trainer(ABC):
             
             for model_container in self._model_containers:
                 model_container.model.train()
-            
+                        
             # Run model on training set   
             for batch in self._phase.train_dataloader: 
                 self._optimizer.zero_grad()
@@ -48,10 +48,11 @@ class Trainer(ABC):
                 train_losses.append(loss.item())
                 train_stats.extend(stats)
                 loss.backward()
+                torch.nn.utils.clip_grad_norm_(self._params, 10) # Life-saving black magic
                 self._optimizer.step()
                                 
             self._scheduler.step()
-
+            
             # Validation
             val_losses = []
             val_stats = []

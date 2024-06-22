@@ -24,7 +24,7 @@ class TrainedCOFFEEBackend(UntrainedCOFFEEBackend):
 
         with torch.set_grad_enabled(False):
             in_count = len(in_features)
-            (filtered_coords, filtered_features) = self._filter.apply(compatible_coords, in_features)
+            (filtered_coords, filtered_features) = (compatible_coords, in_features)
             out_features = self._descriptor.forward_sparse(filtered_coords, filtered_features)
             
             print(len(out_features)/in_count)
@@ -32,15 +32,15 @@ class TrainedCOFFEEBackend(UntrainedCOFFEEBackend):
         # img = np.zeros((1024, 1024, 3))
 
         # mapper = np.linspace(0, 1, out_features.shape[1])
-        # hue = np.dot(out_features, mapper)
-        # value = np.linalg.norm(out_features, axis=1)
+        # hue = np.dot(out_features.cpu(), mapper)/3
+        # value = np.linalg.norm(out_features.cpu(), axis=1)
 
         # hsv = np.array((hue, np.ones_like(hue), value))
         
-        # img[out_coords[:, 0], out_coords[:, 1]] = colors.hsv_to_rgb(hsv.T)
+        # img[filtered_coords[:, 1].cpu(), filtered_coords[:, 2].cpu()] = colors.hsv_to_rgb(hsv.T)
 
         # plt.imshow(img)
-        # plt.show()
+        # plt.pause(0.1)
                                 
         return (filtered_coords[:, 1:3].cpu(), out_features.cpu())
         

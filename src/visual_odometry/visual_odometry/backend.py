@@ -57,10 +57,9 @@ class VOBackend:
             
                 ground_truth = extrinsics_next[:3, :3] @ extrinsics_prev[:3, :3].T
                 
-                print(R)
-                print(ground_truth)
-                
                 error = R @ ground_truth.T
+
+                print(ground_truth)
 
                 error = error[None, :]
 
@@ -89,7 +88,7 @@ class VOBackend:
         np_errors = np.array(errors)
         
         plt.figure()
-        plt.hist(np_errors[np.abs(np_errors) < 2], bins=100)
+        plt.hist(np_errors[np.abs(np_errors) < 10], bins=100)
         plt.show()
         
         print(np.mean(np_errors))

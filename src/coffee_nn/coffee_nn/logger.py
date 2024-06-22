@@ -8,17 +8,17 @@ class Logger:
         
     def report(self, iteration, train_losses, train_stats, val_losses, val_stats):
         # Compute statistics
-        avg_train_loss = torch.tensor(train_losses).mean()
-        avg_val_loss = torch.tensor(val_losses).mean()
-        avg_train_accuracy = torch.tensor(list(map(lambda x: x.accuracy(), train_stats))).mean()
-        avg_val_accuracy = torch.tensor(list(map(lambda x: x.accuracy(), val_stats))).mean()
-        avg_train_precision = torch.tensor(list(map(lambda x: x.precision(), train_stats))).mean()
-        avg_val_precision = torch.tensor(list(map(lambda x: x.precision(), val_stats))).mean()
-        avg_train_recall = torch.tensor(list(map(lambda x: x.recall(), train_stats))).mean()
-        avg_val_recall = torch.tensor(list(map(lambda x: x.recall(), val_stats))).mean()
-        avg_train_f1 = torch.tensor(list(map(lambda x: x.f1(), train_stats))).mean()
-        avg_val_f1 = torch.tensor(list(map(lambda x: x.f1(), val_stats))).mean()
-        avg_pixel_error = torch.tensor(list(map(lambda x: x.pixel_error(), val_stats))).mean()
+        avg_train_loss = torch.tensor(train_losses).nanmean()
+        avg_val_loss = torch.tensor(val_losses).nanmean()
+        avg_train_accuracy = torch.tensor(list(map(lambda x: x.accuracy(), train_stats))).nanmean()
+        avg_val_accuracy = torch.tensor(list(map(lambda x: x.accuracy(), val_stats))).nanmean()
+        avg_train_precision = torch.tensor(list(map(lambda x: x.precision(), train_stats))).nanmean()
+        avg_val_precision = torch.tensor(list(map(lambda x: x.precision(), val_stats))).nanmean()
+        avg_train_recall = torch.tensor(list(map(lambda x: x.recall(), train_stats))).nanmean()
+        avg_val_recall = torch.tensor(list(map(lambda x: x.recall(), val_stats))).nanmean()
+        avg_train_f1 = torch.tensor(list(map(lambda x: x.f1(), train_stats))).nanmean()
+        avg_val_f1 = torch.tensor(list(map(lambda x: x.f1(), val_stats))).nanmean()
+        avg_pixel_error = torch.tensor(list(map(lambda x: x.pixel_error(), val_stats))).nanmean()
 
         # Log statistics
         print(f"Iteration {iteration} finished with train loss {avg_train_loss:.4}, val loss {avg_val_loss:.4}, val f1 {avg_val_f1:.1%}")

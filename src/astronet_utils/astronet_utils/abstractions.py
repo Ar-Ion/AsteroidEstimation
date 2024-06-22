@@ -27,3 +27,8 @@ class Filterable(ABC):
     @abstractmethod
     def filter(data, filter):
         pass
+    
+class Transformable(ABC):
+    @abstractmethod
+    def transform(data, func):
+        pass

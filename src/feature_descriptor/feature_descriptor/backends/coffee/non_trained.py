@@ -3,7 +3,6 @@ import torch
 import numpy as np
 from torch.utils.cpp_extension import load
 from ament_index_python.packages import get_package_share_directory
-from matplotlib import pyplot as plt
 
 from .. import Backend
 
@@ -42,10 +41,7 @@ class UntrainedCOFFEEBackend(Backend):
 
         self._coffee_cuda.init(self._threshold)
     
-    def detect_features(self, image):
-        #plt.figure()
-        #plt.imshow(image, cmap='gray', vmin=0, vmax=255)
-        
+    def detect_features(self, image):        
         # Convert to GPU tensor
         gpu_image = torch.from_numpy(image).to(self._device).contiguous().short()
         
@@ -70,13 +66,6 @@ class UntrainedCOFFEEBackend(Backend):
             most_relevant = torch.topk(features, self._max_features)
             coords = coords[:, most_relevant.indices]
             features = features[most_relevant.indices]
-            
-        # plt.figure()
-        # plt.imshow(image, cmap='gray', vmin=0, vmax=255)
-        # plt.scatter(coords[1, :].cpu(), coords[0, :].cpu(), s=0.1)
-        # plt.xlim(0, 1024)
-        # plt.ylim(1024, 0)
-        # plt.show()
         
         return (coords.T, features[:, None])
         

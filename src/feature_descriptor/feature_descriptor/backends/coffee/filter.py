@@ -11,15 +11,19 @@ class COFFEEFilter(MotionProcessingModel):
     def __init__(self, model_path, autoload=True):
         super().__init__(SparseFilter(), model_path, autoload)
         
-    def apply(self, points_data):
-        out_features = self.forward_sparse(points_data.kps, points_data.features)
-        points_data.features = torch.nn.functional.sigmoid(out_features)
-        out_points = PointsUtils.stash(points_data, lambda x: x < COFFEEFilter.THRESHOLD)      
+    def apply_points(self, points_data):
+        with torch.set_grad_enabled(False):
+            out_features = self.forward_sparse(points_data.kps, points_data.features)
+            points_data.features = torch.nn.functional.sigmoid(out_features)
+            out_points = PointsUtils.stash(points_data, lambda x: x < COFFEEFilter.THRESHOLD)      
+        
         return out_points
     
     def apply(self, coords, features):
-        out_features = self.forward_sparse(coords, features).squeeze()
-        features = torch.nn.functional.sigmoid(out_features)
-        filtered_coords = coords[features >= COFFEEFilter.THRESHOLD]
-        filtered_features = features[features >= COFFEEFilter.THRESHOLD, None]
+        with torch.set_grad_enabled(False):
+            out_features = self.forward_sparse(coords, features).squeeze()
+            features = torch.nn.functional.sigmoid(out_features)
+            filtered_coords = coords[features >= COFFEEFilter.THRESHOLD]
+            filtered_features = features[features >= COFFEEFilter.THRESHOLD, None]
+        
         return (filtered_coords, filtered_features)

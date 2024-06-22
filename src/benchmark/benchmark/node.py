@@ -6,6 +6,7 @@ from astronet_frontends import AsyncFrontend, DriveClientFrontend
 
 from .simple_stats import SimpleStats
 from .precision_recall import PrecisionRecall
+from .visualize import Visualize
 
 def main(args=None):
     rclpy.init(args=args)
@@ -49,10 +50,12 @@ def main(args=None):
 
     simple_stats = SimpleStats(frontend, size, config)
     precision_recall = PrecisionRecall(frontend, size, config)
+    visualize = Visualize(frontend, size, config)
 
     try:
-        simple_stats.loop()        
-        precision_recall.loop()
+        simple_stats.loop()       
+        #precision_recall.loop()
+        visualize.loop() 
         
         rclpy.shutdown()
     except KeyboardInterrupt:

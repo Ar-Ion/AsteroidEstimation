@@ -48,17 +48,17 @@ class SimpleStats:
         while count < self._size:
             input = self._frontend.receive(blocking=True)
                         
-            chunks = MotionUtils.create_chunks(input, 1024, 1024)
+            #chunks = MotionUtils.create_chunks(input, 1024, 1024)
 
-            valid_chunks = list(filter(MotionUtils.is_valid, chunks))
+            # valid_chunks = list(filter(MotionUtils.is_valid, chunks))
             
-            valid_batch = MotionUtils.batched(valid_chunks)
-            valid_batch_gpu = MotionUtils.to(valid_batch, device=self._device)
+            batch = MotionUtils.batched([input])
+            batch_gpu = MotionUtils.to(batch, device=self._device)
 
-            avg_batch_size += valid_batch_gpu.num_batches
+            avg_batch_size += batch_gpu.num_batches
                 
-            for idx in range(valid_batch_gpu.num_batches):
-                data = MotionUtils.retrieve(valid_batch_gpu, idx)
+            for idx in range(batch_gpu.num_batches):
+                data = MotionUtils.retrieve(batch_gpu, idx)
                 
                 prev_points_25D = torch.hstack((data.prev_points.kps, data.prev_points.depths[:, None]))
                 world_points_3D = ProjectionUtils.camera2object(data.prev_points.proj, prev_points_25D)
@@ -69,8 +69,11 @@ class SimpleStats:
                 true_matches = self._keypoints_criterion.apply(true_dists)
                                 
                 pred_dists, pred_matches = self._matcher.match(data)
-                            
-                stats.append(Statistics(true_dists, true_matches, pred_matches))            
+                
+                local_stats = Statistics(true_dists, true_matches, pred_matches)
+                 
+                stats.append(local_stats)  
+       
                 feature_count += 0.5*(data.prev_points.features.size(0) + data.prev_points.features.size(0))
                 
             count += 1
@@ -79,14 +82,14 @@ class SimpleStats:
                 print("Computed statistics for " + f"{count/self._size:.0%}" + " of the described data")
 
         avg_batch_size /= self._size
-        avg_accuracy = torch.tensor(list(map(lambda x: x.accuracy(), stats))).mean()
-        avg_precision = torch.tensor(list(map(lambda x: x.precision(), stats))).mean()
-        avg_recall = torch.tensor(list(map(lambda x: x.recall(), stats))).mean()
-        avg_f1 = torch.tensor(list(map(lambda x: x.f1(), stats))).mean()
+        avg_accuracy = torch.tensor(list(map(lambda x: x.accuracy(), stats))).nanmean()
+        avg_precision = torch.tensor(list(map(lambda x: x.precision(), stats))).nanmean()
+        avg_recall = torch.tensor(list(map(lambda x: x.recall(), stats))).nanmean()
+        avg_f1 = torch.tensor(list(map(lambda x: x.f1(), stats))).nanmean()
         avg_feature_count = feature_count / self._size
-        avg_true_count = torch.tensor(list(map(lambda x: x.true_count(), stats))).mean()*avg_batch_size
-        avg_positive_count = torch.tensor(list(map(lambda x: x.positive_count(), stats))).mean()*avg_batch_size
-        avg_pixel_error = torch.tensor(list(map(lambda x: x.pixel_error(), stats))).mean()
+        avg_true_count = torch.tensor(list(map(lambda x: x.true_count(), stats))).nanmean()*avg_batch_size
+        avg_positive_count = torch.tensor(list(map(lambda x: x.positive_count(), stats))).nanmean()*avg_batch_size
+        avg_pixel_error = torch.tensor(list(map(lambda x: x.pixel_error(), stats))).nanmean()
 
         print(f"Average accuracy: {avg_accuracy}")
         print(f"Average precision: {avg_precision}")

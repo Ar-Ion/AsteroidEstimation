@@ -18,11 +18,17 @@ class Verifier:
         dist_stats = []
         features_means = []
         features_stds = []
+        features_means2 = []
+        features_stds2 = []
         bias = []
 
         count = 0
         
-        crit = Intersection(MinRatio(1.0), LessThan(8))
+        crit = Intersection(MinRatio(1.0), LessThan(2))
+        
+        global_sum = 0
+        global_ssq = 0
+        global_count = 0
         
         while count < self._size:
             data = self._frontend.receive(blocking=True)
@@ -44,36 +50,39 @@ class Verifier:
                 
                 bias.append((distance_matrix[filter]).mean(dim=0))
 
-                if ratio < 0.5:
+                if ratio < 0.1:
                     print(f"The data at index {count} doesn't make sense")
 
-                    plt.figure()
-                    plt.scatter(prev_points_2D.kps[:, 1].cpu(), prev_points_2D.kps[:, 0].cpu(), s=1)
-                    plt.scatter(reproj_points_2D[:, 1].cpu(), reproj_points_2D[:, 0].cpu(), s=1)
-                    plt.scatter(next_points_2D.kps[:, 1].cpu(), next_points_2D.kps[:, 0].cpu(), s=1)
-                    plt.xlim((0, 1024))
-                    plt.ylim((0, 1024))
-                    plt.show()
+                    # plt.figure()
+                    # plt.scatter(prev_points_2D.kps[:, 1].cpu(), prev_points_2D.kps[:, 0].cpu(), s=1)
+                    # plt.scatter(reproj_points_2D[:, 1].cpu(), reproj_points_2D[:, 0].cpu(), s=1)
+                    # plt.scatter(next_points_2D.kps[:, 1].cpu(), next_points_2D.kps[:, 0].cpu(), s=1)
+                    # plt.xlim((0, 1024))
+                    # plt.ylim((0, 1024))
+                    # plt.show()
 
                 if len(distance_matrix) > 0:
                     shortest_distance = distance_matrix.min(dim=0).values
                     dist_stats.append(shortest_distance)
                 
-                if len(data.prev_points.features) > 1:                
-                    features_means.append(data.prev_points.features.mean())
-                    features_stds.append(data.prev_points.features.std())
-                    
-                if len(data.next_points.features) > 1:
-                    features_means.append(data.next_points.features.mean())
-                    features_stds.append(data.next_points.features.std())
+                local_sum = data.prev_points.features.sum() + data.prev_points.features.sum()
+                local_count = len(data.prev_points.features) + len(data.next_points.features)
                 
+                if local_count > 1:   
+                    local_mean = local_sum/local_count # This should be a good-enough approximation of the global mean
+                    local_ssq =  ((data.prev_points.features - local_mean)**2).sum() + ((data.next_points.features - local_mean)**2).sum()
+                    global_sum += local_sum
+                    global_ssq += local_ssq # SSQ := Sum of squares
+                    global_count += local_count
+                    
             count += 1
 
             if count % 100 == 0:
                 print("Verified " + f"{count/self._size:.0%}" + " of synthetic motion data")
                                                 
-        print(f"Mean: {torch.tensor(features_means).mean()}")
-        print(f"Std: {torch.tensor(features_stds).mean()}")
+        print(f"Mean: {global_sum/global_count}")
+        print(f"Std: {(global_ssq/(global_count-1))**0.5}")
+        
         print(f"Bias: {torch.vstack(bias).mean(dim=0)}")
 
         print(torch.hstack(dist_stats))

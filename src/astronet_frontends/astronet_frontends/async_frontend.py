@@ -2,6 +2,7 @@ import threading
 import multiprocessing
 import queue
 import ctypes
+import random
 
 # Make each AsyncEvent unique and comparable by memory location
 class AsyncEvent:
@@ -13,7 +14,7 @@ class AsyncEvent:
         
 class AsyncFrontend:
 
-    def __init__(self, frontend, num_workers=16, wait=True, random=False):  
+    def __init__(self, frontend, num_workers=16, wait=True, is_random=False):  
         self._frontend = frontend
         self._wait = wait
         
@@ -23,13 +24,7 @@ class AsyncFrontend:
         self._output_queue = multiprocessing.Queue(512)
         
         # Add affine coefficients for random number generation
-        if random:
-            # Large (co-)prime numbers (similar to Java implementation for RNG)
-            self._multiplier = 193939
-            self._offset = 199933
-        else:
-            self._multiplier = 1
-            self._offset = 1
+        self._is_random = is_random
         
         # Defines an async subprocess to speed up the data transmission/reception pipeline.
         # Arguments are passed as simple object and queues to simplify memory management.
@@ -54,8 +49,7 @@ class AsyncFrontend:
                 self._alive,
                 self._resource_counter, 
                 self._input_queue,
-                self._multiplier, 
-                self._offset
+                self._is_random
             )
         )
         
@@ -84,6 +78,9 @@ class AsyncFrontend:
         # Wait for subprocesses to terminate
         for process in self._processes:
             process.kill()
+        
+        self._input_queue.close()
+        self._output_queue.close()
             
                             
     # The AsyncFrontend objects must be designed to have the transmission and reception systems run on a single thread.
@@ -98,18 +95,23 @@ class AsyncFrontend:
             # Process the event queue
             try:
                 input = input_queue.get()
-                
+
                 if input != None:
                     frontend.on_input(input)
             except KeyboardInterrupt:
                 break # Parent process decided to terminate the frontend
                         
-    def run_scheduler(alive, resource_counter, input_queue, multiplier, offset):                
+    def run_scheduler(alive, resource_counter, input_queue, is_random):                
         while alive.value:
             try:
                 with resource_counter.get_lock():
                     input_queue.put((resource_counter.value, None))
-                    resource_counter.value = resource_counter.value * multiplier + offset
+                    
+                    if is_random:
+                        random.seed(resource_counter.value)
+                        resource_counter.value = random.randint(0, 65536*65536)
+                    else:
+                        resource_counter.value = resource_counter.value + 1
             except KeyboardInterrupt:
                 break # Parent process decided to terminate the frontend
                                        
@@ -117,7 +119,13 @@ class AsyncFrontend:
     def transmit(self, data):
         with self._resource_counter.get_lock():
             self._input_queue.put((self._resource_counter.value, data))
-            self._resource_counter.value = self._resource_counter.value * self._multiplier + self._offset
+            
+            if self._is_random:
+                random.seed(self._resource_counter.value)
+                self._resource_counter.value = random.randint(0, 2**31-1)
+            else:
+                self._resource_counter.value = self._resource_counter.value + 1
+            
         
     # Fetches new data from the the async subprocess. May return None if no new data has been received.    
     def receive(self, blocking=False):

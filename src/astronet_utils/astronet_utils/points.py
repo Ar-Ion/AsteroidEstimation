@@ -4,9 +4,10 @@ import MinkowskiEngine as ME
 from astronet_msgs.motion_data import MotionData
 
 from .projection import ProjectionUtils
-from .abstractions import Batchable, Torchable, Chunkable
+from .abstractions import Transformable, Batchable, Torchable, Chunkable
 
-class PointsUtils(Batchable, Torchable, Chunkable):
+class PointsUtils(Transformable, Batchable, Torchable, Chunkable):
+
     # Functionalities
     def stash(points_data, predicate):
         filter = ~predicate(points_data.features).squeeze()
@@ -14,6 +15,21 @@ class PointsUtils(Batchable, Torchable, Chunkable):
         kps = points_data.kps[filter]
         depths = points_data.depths[filter]
         features = points_data.features[filter]
+        proj = points_data.proj
+        
+        return MotionData.PointsData(
+            kps, 
+            depths, 
+            features, 
+            proj,
+            points_data.num_batches
+        )
+        
+    # Compliance with Transformable abstraction
+    def transform(points_data, func):
+        kps = points_data.kps
+        depths = points_data.depths
+        features = func(points_data.features)
         proj = points_data.proj
         
         return MotionData.PointsData(
