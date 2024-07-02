@@ -46,7 +46,7 @@ class VOBackend:
             
             data_gpu = MotionUtils.to(data, device=self._device)
 
-            #R, t = self._vo.get_sampled_poses(data_gpu, num_samples=1)
+            #out = self._vo.get_sampled_poses(data_gpu, num_samples=10)
             out = self._vo.compute_pose(data_gpu)
             
             if out != None:
@@ -59,9 +59,7 @@ class VOBackend:
                 
                 error = R @ ground_truth.T
 
-                print(ground_truth)
-
-                error = error[None, :]
+                #error = error[None, :]
 
                 for i in range(len(error)):   
                     error_vec, _ = cv2.Rodrigues(error[i])

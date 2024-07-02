@@ -7,7 +7,9 @@ class VisualOdometry:
     def __init__(self, matcher):
         self._matcher = matcher
 
-    def minimal_set(self, length, set_size=20):
+    def minimal_set(self, length, ratio=0.5):
+        set_size = int(ratio*length)
+        
         if length > set_size:
             return np.array([True]*set_size + [False]*(length-set_size))
         else:
@@ -24,7 +26,7 @@ class VisualOdometry:
 
             K = data.prev_points.proj.intrinsics.K.cpu().numpy()
             
-            E, mask = cv2.findEssentialMat(coords_prev, coords_next, K, method=cv2.USAC_MAGSAC, prob=0.999, threshold=0.1)
+            E, mask = cv2.findEssentialMat(coords_prev, coords_next, K, method=cv2.USAC_MAGSAC, prob=0.99, threshold=0.1)
             _, R, t, _ = cv2.recoverPose(E[:3, :3], coords_prev, coords_next, K, mask)
             
             return R, t
@@ -56,6 +58,7 @@ class VisualOdometry:
 
         for i in range(num_samples):
             np.random.shuffle(mask)
+
             E, mask2 = cv2.findEssentialMat(coords_prev[mask], coords_next[mask], K)
             
             if E is not None:

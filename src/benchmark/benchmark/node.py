@@ -5,6 +5,7 @@ import astronet_frontends.factory
 from astronet_frontends import AsyncFrontend, DriveClientFrontend
 
 from .simple_stats import SimpleStats
+from .error_points import ErrorPoints
 from .precision_recall import PrecisionRecall
 from .visualize import Visualize
 
@@ -49,11 +50,13 @@ def main(args=None):
     frontend.start()
 
     simple_stats = SimpleStats(frontend, size, config)
+    error_points = ErrorPoints(frontend, size, config, output_params)
     precision_recall = PrecisionRecall(frontend, size, config)
     visualize = Visualize(frontend, size, config)
 
     try:
         simple_stats.loop()       
+        #error_points.loop()
         #precision_recall.loop()
         visualize.loop() 
         

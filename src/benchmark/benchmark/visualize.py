@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.patches import ConnectionPatch
 
 from feature_matcher.backends.criteria import MatchCriterion
 from feature_matcher.backends.metrics import MatchMetric
@@ -42,7 +43,10 @@ class Visualize:
     def loop(self):
         
         count = 0
-
+        
+        randoms = np.random.rand(128, 3)
+        color_bases = randoms / np.reshape(np.linalg.norm(randoms, axis=1), (-1, 1))
+        
         while count < self._size:
             input = self._frontend.receive(blocking=True)
             
@@ -50,10 +54,6 @@ class Visualize:
             valid_chunks = list(filter(MotionUtils.is_valid, chunks))
             valid_batch = MotionUtils.batched(valid_chunks)
             valid_batch_gpu = MotionUtils.to(valid_batch, device=self._device)
-            
-            plt.clf()
-            plt.xlim((0, 1024))
-            plt.ylim((0, 1024))
                                 
             for idx in range(valid_batch_gpu.num_batches):
                 data = MotionUtils.retrieve(valid_batch_gpu, idx)
@@ -69,21 +69,45 @@ class Visualize:
                 
                 indices = torch.nonzero(pred_matches).cpu().numpy()
                         
-                all_coords_prev = data.prev_points.kps.cpu().numpy()
-                all_coords_next = data.next_points.kps.cpu().numpy()
+                prev_coords = data.prev_points.kps.cpu().numpy()
+                next_coords = data.next_points.kps.cpu().numpy()
+                prev_features = data.prev_points.features.cpu().numpy()
+                next_features = data.next_points.features.cpu().numpy()
                                 
-                coords_prev = all_coords_prev[indices[:, 0]]
-                coords_next = all_coords_next[indices[:, 1]]     
+                normalized_prev_features = (prev_features - np.mean(prev_features, axis=0))/np.std(prev_features, axis=0)
+                normed_prev_features = normalized_prev_features / np.reshape(np.linalg.norm(normalized_prev_features, axis=1), (-1, 1))
+                prev_colors = np.clip(0.5*(1 + normed_prev_features @ color_bases), 0, 1)
                 
-                plt.figure()  
-                                
-                for i in range(len(indices)):
-                    prev = coords_prev[i]
-                    next = coords_next[i]                                                            
-                    plt.plot([prev[1], next[1]], [prev[0], next[0]])
-                    plt.scatter(prev_points_25D[:, 1].cpu(), prev_points_25D[:, 0].cpu(), s=0.1)
-                    plt.scatter(reproj_points_25D[:, 1].cpu(), reproj_points_25D[:, 0].cpu(), s=0.1)
+                normalized_next_features = (next_features - np.mean(next_features, axis=0))/np.std(next_features, axis=0)
+                normed_next_features = normalized_next_features / np.reshape(np.linalg.norm(normalized_next_features, axis=1), (-1, 1))
+                next_colors = np.clip(0.5*(1 + normed_next_features @ color_bases), 0, 1)
+                
+                matched_prev_coords = prev_coords[indices[:, 0]]
+                matched_next_coords = next_coords[indices[:, 1]]
+                matched_colors = (prev_colors[indices[:, 0]] + next_colors[indices[:, 1]])/2
+                
+                fig = plt.figure(figsize=(14, 6))
+                
+                ax1 = plt.subplot(1, 2, 1)  
+                ax1.scatter(data.prev_points.kps[:, 1].cpu(), data.prev_points.kps[:, 0].cpu(), s=0.1, color=prev_colors)
+                ax1.set_xlim([0, 1024])
+                ax1.set_ylim([0, 1024])
+                ax1.grid()
 
+                ax2 = plt.subplot(1, 2, 2)  
+                ax2.scatter(data.next_points.kps[:, 1].cpu(), data.next_points.kps[:, 0].cpu(), s=0.1, color=next_colors)
+                ax2.set_xlim([0, 1024])
+                ax2.set_ylim([0, 1024])
+                ax2.grid()
+                
+                for i in range(len(indices)):
+                    prev = np.flip(matched_prev_coords[i])
+                    next = np.flip(matched_next_coords[i])
+                    color = np.hstack((matched_colors[i], np.array((0.2))))
+                    
+                    match = ConnectionPatch(xyA=prev, xyB=next, coordsA="data", coordsB="data", axesA=ax1, axesB=ax2, color=color)
+                    fig.add_artist(match)
+                    
                 plt.show()
                      
             count += 1
