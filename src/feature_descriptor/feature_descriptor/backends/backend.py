@@ -29,6 +29,16 @@ class Backend(ABC):
             # plt.xlim(0, 1024)
             # plt.ylim(1024, 0)
             # plt.show()
+            # r_occurrences = camera_data.image
+
+            # r_range = np.max(r_occurrences) - np.min(r_occurrences)
+            # plt.figure()
+            # plt.title("Distribution of reds in a sample tissue of mucinous adenocarcinoma")
+            # plt.xlabel("Intensity")
+            # plt.ylabel("Occurrences")
+            # plt.hist(r_occurrences, int(r_range))
+            # plt.show()
+            
             
             depth_np = camera_data.depth[coords_cpu[:, 0], coords_cpu[:, 1]]
             

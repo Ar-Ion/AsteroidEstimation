@@ -23,7 +23,7 @@ class Trainer(ABC):
 
         # Logger
         names = [model_container.__class__.__name__ for model_container in model_containers]
-        self._logger = Logger("@".join(names))
+        self._logger = Logger("@".join(names)) # Create a readable name. e.g. COFFEEDescriptor@LightglueMatcher
                 
         # Optimizer instantiation
         self._params = chain(*[model_container.model.parameters() for model_container in model_containers])
@@ -48,7 +48,7 @@ class Trainer(ABC):
                 train_losses.append(loss.item())
                 train_stats.extend(stats)
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(self._params, 10) # Life-saving black magic
+                torch.nn.utils.clip_grad_norm_(self._params, 10) # Life-saving black magic      
                 self._optimizer.step()
                                 
             self._scheduler.step()

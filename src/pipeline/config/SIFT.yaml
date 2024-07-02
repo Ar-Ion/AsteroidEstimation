@@ -9,8 +9,8 @@ eval_benchmarker:
       features:
         matcher: "ClassicalMatcher"
         matcher_args: ["L2"]
-        criterion: "LessThan"
-        criterion_args: [170.0]
+        criterion: "MinRatio"
+        criterion_args: [0.7]
 
 eval_vo:
   ros__parameters: 

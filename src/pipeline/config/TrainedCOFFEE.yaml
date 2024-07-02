@@ -4,13 +4,13 @@ eval_benchmarker:
       keypoints:
         metric: "L2"
         criterion: "LessThan"
-        criterion_args: [1.41]
+        criterion_args: [2.0]
 
       features:
         matcher: "LightglueMatcher"
-        matcher_args: ["/home/arion/AsteroidMatcherModelSaved.pth"]
+        matcher_args: ["/home/arion/AsteroidMatcherModel.pth"]
         criterion: "GreaterThan"
-        criterion_args: [0.2]
+        criterion_args: [0.05]
         # matcher: "ClassicalMatcher"
         # matcher_args: ["Cosine"]
         # criterion: "GreaterThan"
@@ -22,9 +22,9 @@ eval_vo:
       filter: "SparseFilter"
       filter_args: ["/home/arion/AsteroidFilterModel.pth"]
       matcher: "LightglueMatcher"
-      matcher_args: ["/home/arion/AsteroidMatcherModelSaved.pth"]
+      matcher_args: ["/home/arion/AsteroidMatcherModel.pth"]
       criterion: "GreaterThan"
-      criterion_args: [0.2]
+      criterion_args: [0.05]
       #   matcher: "ClassicalMatcher"
       #   matcher_args: ["Cosine"]
       #   criterion: "GreaterThan"
