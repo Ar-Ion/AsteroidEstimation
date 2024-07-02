@@ -1,5 +1,7 @@
 import torch
 import MinkowskiEngine as ME
+
+from coffee_nn.hardware import GPU
 from coffee_nn.models.filters import SparseFilter
 from coffee_nn.common import MotionProcessingModel
 from astronet_utils import PointsUtils
@@ -8,8 +10,8 @@ class COFFEEFilter(MotionProcessingModel):
     
     THRESHOLD = 0.8
     
-    def __init__(self, model_path, autoload=True):
-        super().__init__(SparseFilter(), model_path, autoload)
+    def __init__(self, model_path, autoload=True, gpu=None):
+        super().__init__(gpu, SparseFilter(), model_path, autoload)
         
     def apply_points(self, points_data):
         with torch.set_grad_enabled(False):

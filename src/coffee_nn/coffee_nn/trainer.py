@@ -7,10 +7,9 @@ from abc import ABC, abstractmethod
 from astronet_utils import MotionUtils
 
 from .logger import Logger
-from .hardware import GPU
 
 class Trainer(ABC):
-    def __init__(self, model_containers, initial_phase, lr=0.001, gamma=1.0, weight_decay=0):
+    def __init__(self, gpu, model_containers, initial_phase, lr=0.001, gamma=1.0, weight_decay=0):
         # Set models
         self._model_containers = model_containers
 
@@ -19,11 +18,14 @@ class Trainer(ABC):
         self._iter = 0
         
         # CUDA configuration
-        self._gpu = GPU()
+        self._gpu = gpu
 
         # Logger
-        names = [model_container.__class__.__name__ for model_container in model_containers]
-        self._logger = Logger("@".join(names)) # Create a readable name. e.g. COFFEEDescriptor@LightglueMatcher
+        if gpu.device.index == 0: # Create only one logger
+            names = [model_container.__class__.__name__ for model_container in model_containers]
+            self._logger = Logger("@".join(names)) # Create a readable name. e.g. COFFEEDescriptor@LightglueMatcher
+        else:
+            self._logger = None
                 
         # Optimizer instantiation
         self._params = chain(*[model_container.model.parameters() for model_container in model_containers])
@@ -39,13 +41,13 @@ class Trainer(ABC):
             
             for model_container in self._model_containers:
                 model_container.model.train()
-                        
+                                        
             # Run model on training set   
             for batch in self._phase.train_dataloader: 
                 self._optimizer.zero_grad()
                 batch_gpu = MotionUtils.to(batch, device=self._gpu.device)
                 (loss, stats) = self.forward(batch_gpu)
-                train_losses.append(loss.item())
+                train_losses.append(loss.detach().item())
                 train_stats.extend(stats)
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(self._params, 10) # Life-saving black magic      
@@ -69,7 +71,8 @@ class Trainer(ABC):
                     val_stats.extend(stats)
                     
             # Cloud reporting
-            self._logger.report(self._iter, train_losses, train_stats, val_losses, val_stats)
+            if self._logger != None:
+                self._logger.report(self._iter, train_losses, train_stats, val_losses, val_stats)
 
             # Update FSM
             self._iter += 1

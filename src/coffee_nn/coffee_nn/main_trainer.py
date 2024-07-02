@@ -13,7 +13,7 @@ from .train_utils import TrainDataProvider, TrainPhase
 from .randomizer import Randomizer
 
 class MainTrainer(Trainer):
-    def __init__(self, train_frontend, validate_frontend, train_size, validate_size, descriptor_params, matcher_params, filter_params):
+    def __init__(self, gpu, train_frontend, validate_frontend, train_size, validate_size, descriptor_params, matcher_params, filter_params):
         # Initialize datasets for training and validate
         self._train_frontend = train_frontend
         self._validate_frontend = validate_frontend
@@ -25,14 +25,14 @@ class MainTrainer(Trainer):
         self._main_phase = TrainPhase(train_dp, validate_dp, 512, 8, 100) # Active for 100 epochs
         
         # Model instantiation
-        self._descriptor = COFFEEDescriptor(autoload=False, **descriptor_params)
-        self._matcher = LightglueMatcher(criterion=GreaterThan(0.1), autoload=False, **matcher_params) # 0.2 is arbitrary and is tuned for evaluation. No influence on training.
+        self._descriptor = COFFEEDescriptor(gpu=gpu, autoload=False, **descriptor_params)
+        self._matcher = LightglueMatcher(gpu=gpu, criterion=GreaterThan(0.1), autoload=False, **matcher_params) # 0.2 is arbitrary and is tuned for evaluation. No influence on training.
 
         # Domain randomization
         self._randomizer = Randomizer(1024, 1024, 0.5, 0.5)
 
         # Call parent constructor
-        super().__init__([self._descriptor, self._matcher], self._main_phase, lr=0.0001)
+        super().__init__(gpu, [self._descriptor, self._matcher], self._main_phase, lr=0.0001)
 
         ## Loss function metrics 
         self._loss_match = CrossEntropyLoss() # Cross-entropy, as specified in the LightGlue/SuperGlue paper

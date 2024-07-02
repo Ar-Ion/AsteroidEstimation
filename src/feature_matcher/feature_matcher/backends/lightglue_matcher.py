@@ -1,34 +1,16 @@
 import torch
+
+from coffee_nn.hardware import GPU
+from coffee_nn.common import Model
 from coffee_nn.models.matchers import LightGlue
+
 from .matcher import Matcher
 
-class LightglueMatcher(Matcher):
-    def __init__(self, model_path, criterion=None, autoload=True):
-        super().__init__(criterion)
+class LightglueMatcher(Model, Matcher):
+    def __init__(self, model_path, criterion=None, autoload=True, gpu=None):
+        Matcher.__init__(self, criterion)
+        Model.__init__(self, gpu, LightGlue(features="coffee").float(), model_path, autoload=autoload)
 
-        self._model_path = model_path
-        
-        # Load GPU
-        print("Loading GPU...")
-        self._device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        torch.set_default_device(self._device)
-        print("GPU loaded. Using compute device: " + str(self._device))
-        
-        # Model instantiation
-        model_wrapped = LightGlue(features="coffee")
-        self.model = model_wrapped.float().to(self._device)
-        self.model.eval()
-        
-        if autoload:
-            print("Loading matcher model checkpoint...")
-            self.load()
-            
-    def load(self):
-        self.model.load_state_dict(torch.load(self._model_path))
-        
-    def save(self):
-        torch.save(self.model.state_dict(), self._model_path)
-        
     def match(self, data):
         
         size = torch.tensor(((1024, 1024)))

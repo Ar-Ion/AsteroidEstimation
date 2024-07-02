@@ -56,6 +56,7 @@ class SparseSuperPoint(ME.MinkowskiNetwork):
         self.interp = ME.MinkowskiInterpolation()
 
     def forward(self, x):
+
         out = self.conv0(x)
         out_s1 = self.conv1a(out)
         out = self.conv1b(out_s1)

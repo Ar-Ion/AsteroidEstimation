@@ -5,14 +5,26 @@ import copy
 from .hardware import GPU
 
 class Model:
-    def __init__(self, wrapped_model, model_path, autoload=True):
+    def __init__(self, gpu, wrapped_model, model_path, autoload=True):
         self._model_path = model_path
                 
         # Load GPU 
-        self._gpu = GPU()
+        if gpu != None:
+            self._gpu = gpu
+        else:
+            self._gpu = GPU("cuda:0")
 
         # Model instantiation
-        self.model = wrapped_model.to(self._gpu.device)
+        cuda_model = wrapped_model.to(self._gpu.device)
+
+        if gpu.ddp:
+            ddp_model = torch.nn.parallel.DistributedDataParallel(cuda_model, device_ids=[self._gpu.device], find_unused_parameters=True)
+            sync_model = ME.MinkowskiSyncBatchNorm.convert_sync_batchnorm(ddp_model)
+            sync_model._set_static_graph()
+            self.model = sync_model
+        else:
+            self.model = cuda_model
+        
         self.model.eval()
         
         if autoload:

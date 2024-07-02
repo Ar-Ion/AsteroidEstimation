@@ -2,6 +2,7 @@ import torch
 
 from benchmark.statistics import Statistics
 from astronet_utils import ProjectionUtils, PointsUtils
+from coffee_nn.hardware import GPU
 
 from .metrics import L2
 from .criteria import LessThan
@@ -15,10 +16,7 @@ class Backend:
         self._keypoints_criterion = LessThan(2)
         self._matcher = matcher
 
-        print("Loading GPU...")
-        self._device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        torch.set_default_device(self._device)
-        print("GPU loaded. Using compute device: " + str(self._device))
+        self._gpu = GPU()
 
     def loop(self):
         count = 0

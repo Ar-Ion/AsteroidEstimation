@@ -26,7 +26,7 @@ class VisualOdometry:
 
             K = data.prev_points.proj.intrinsics.K.cpu().numpy()
             
-            E, mask = cv2.findEssentialMat(coords_prev, coords_next, K, method=cv2.USAC_MAGSAC, prob=0.99, threshold=0.1)
+            E, mask = cv2.findEssentialMat(coords_prev, coords_next, K)
             _, R, t, _ = cv2.recoverPose(E[:3, :3], coords_prev, coords_next, K, mask)
             
             return R, t

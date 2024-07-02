@@ -59,7 +59,7 @@ class VOBackend:
                 
                 error = R @ ground_truth.T
 
-                #error = error[None, :]
+                error = error[None, :]
 
                 for i in range(len(error)):   
                     error_vec, _ = cv2.Rodrigues(error[i])

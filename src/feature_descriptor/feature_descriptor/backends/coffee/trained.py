@@ -4,6 +4,8 @@ import numpy as np
 from matplotlib import colors
 from matplotlib import pyplot as plt
 
+from coffee_nn.hardware import GPU
+
 from .non_trained import UntrainedCOFFEEBackend
 from .descriptor import COFFEEDescriptor
 from .filter import COFFEEFilter
@@ -11,10 +13,10 @@ from .filter import COFFEEFilter
 # Celestial Occlusion Fast FEature Extractor
 class TrainedCOFFEEBackend(UntrainedCOFFEEBackend):
 
-    def __init__(self, client, server, size, backend_params):
-        super().__init__(client, server, size, backend_params)
-        self._filter = COFFEEFilter(model_path=backend_params["filter_model_path"])
-        self._descriptor = COFFEEDescriptor(model_path=backend_params["descriptor_model_path"])
+    def __init__(self, client, server, size, backend_params, gpu=None):
+        super().__init__(client, server, size, backend_params, gpu=gpu)
+        self._filter = COFFEEFilter(gpu=gpu, model_path=backend_params["filter_model_path"])
+        self._descriptor = COFFEEDescriptor(gpu=gpu, model_path=backend_params["descriptor_model_path"])
     
     def detect_features(self, image):
         (in_coords, in_features) = super().detect_features(image)
