@@ -27,7 +27,7 @@ class FilterTrainer(Trainer):
         self._filter = COFFEEFilter(autoload=False, **filter_params)
 
         # Call parent constructor
-        super().__init__([self._filter], self._normal_phase, lr=0.0001)
+        super().__init__([self._filter], self._normal_phase, lr=0.001)
 
         ## Loss function metrics 
         self._loss = torch.nn.BCEWithLogitsLoss(pos_weight=torch.tensor(30))

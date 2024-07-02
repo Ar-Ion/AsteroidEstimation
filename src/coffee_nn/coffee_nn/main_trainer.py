@@ -1,16 +1,16 @@
 import torch
-import MinkowskiEngine as ME
 
-from feature_matcher.backends import ClassicalMatcher, LightglueMatcher, SuperglueMatcher
-from feature_matcher.backends.metrics import L2, Cosine
-from feature_matcher.backends.criteria import GreaterThan, LessThan, MinRatio, Intersection, MaxRatio
+from feature_matcher.backends import LightglueMatcher
+from feature_matcher.backends.metrics import L2
+from feature_matcher.backends.criteria import GreaterThan, LessThan, MinRatio, Intersection
 from benchmark.statistics import Statistics
-from feature_descriptor.backends.coffee import COFFEEDescriptor, COFFEEFilter
-from astronet_utils import ProjectionUtils, MotionUtils, PointsUtils
+from feature_descriptor.backends.coffee import COFFEEDescriptor
+from astronet_utils import ProjectionUtils, MotionUtils
 
 from .trainer import Trainer
-from .losses import HingeLoss, CrossEntropyLoss
+from .losses import CrossEntropyLoss, KLLoss
 from .train_utils import TrainDataProvider, TrainPhase
+from .randomizer import Randomizer
 
 class MainTrainer(Trainer):
     def __init__(self, train_frontend, validate_frontend, train_size, validate_size, descriptor_params, matcher_params, filter_params):
@@ -21,36 +21,31 @@ class MainTrainer(Trainer):
         train_dp = TrainDataProvider(train_frontend, int(train_size))
         validate_dp = TrainDataProvider(validate_frontend, int(validate_size))
         
-        self._train_coarse_descriptor_phase = TrainPhase(train_dp, validate_dp, 128, 32, 0) # Active for 1/8 epoch
-        self._train_coarse_matcher_phase = TrainPhase(train_dp, validate_dp, 512, 8, 0) # Active for 1/8 epoch
-        self._train_fine_phase = TrainPhase(train_dp, validate_dp, 512, 8, 100) # Active for 10 epochs
-
-        self._train_coarse_descriptor_phase.set_next(self._train_coarse_matcher_phase)
-        self._train_coarse_matcher_phase.set_next(self._train_fine_phase)
-        self._train_fine_phase.set_next(None)
+        # 512 iterations per epoch, Batch size of 8, running for 100 epochs
+        self._main_phase = TrainPhase(train_dp, validate_dp, 512, 8, 100) # Active for 100 epochs
         
         # Model instantiation
         self._descriptor = COFFEEDescriptor(autoload=False, **descriptor_params)
-        self._matcher = LightglueMatcher(criterion=GreaterThan(0.2), autoload=False, **matcher_params)
-        self._filter = COFFEEFilter(autoload=True, **filter_params)
+        self._matcher = LightglueMatcher(criterion=GreaterThan(0.1), autoload=False, **matcher_params) # 0.2 is arbitrary and is tuned for evaluation. No influence on training.
+
+        # Domain randomization
+        self._randomizer = Randomizer(1024, 1024, 0.5, 0.5)
 
         # Call parent constructor
-        super().__init__([self._descriptor, self._matcher], self._train_coarse_descriptor_phase, lr=0.0001, gamma=0.999)
+        super().__init__([self._descriptor, self._matcher], self._main_phase, lr=0.0001)
 
         ## Loss function metrics 
-        self._loss_match = CrossEntropyLoss()
-        self._loss_desc = HingeLoss(0.4, 0.1)
-        self._keypoints_metric = L2
-        self._keypoints_criterion = Intersection(MinRatio(1.0), LessThan(1.41))
-        self._matcher_warmup = ClassicalMatcher(criterion=GreaterThan(0.75), metric="Cosine") # This matcher is used to help the model converge
+        self._loss_match = CrossEntropyLoss() # Cross-entropy, as specified in the LightGlue/SuperGlue paper
+        self._keypoints_metric = L2 # L2 norm to match pixels in image-space
+        
+        # The MinRatio is used to force a maximum of one match per pixel, as required by the optimal transport algorithm. 
+        # The LessThen force matches to be pixels less than a given distance. Technically, the number should be sqrt(2) 
+        # to match all neighbouring pixels but sometimes, the surface is smooth and the shadow doesn't by exactly one pixel.
+        self._keypoints_criterion = Intersection(MinRatio(1.0), LessThan(4))
         
     ## Forward pass methods
     # Forwards a batch to the model
     def forward(self, batch):    
-        # Filter forward (not training)
-        #batch.prev_points = self._filter.apply_points(batch.prev_points)
-        #batch.next_points = self._filter.apply_points(batch.next_points)
-        
         # Descriptor forward (training)
         batch_output = self._descriptor.forward_motion(batch)
         
@@ -60,31 +55,38 @@ class MainTrainer(Trainer):
         batch_stats = []
                             
         for idx in range(batch_output.num_batches):
+            # Compute loss sample per sample to save memory (can be improved for sure)
             output = MotionUtils.retrieve(batch_output, idx)
             
+            # First, concatenate the ground-truth depth to the keypoints. prev_points_25D is then the depth image, as seen from the camera.
             prev_points_25D = torch.hstack((output.prev_points.kps, output.prev_points.depths[:, None]))
+            # Then, back-project from the camera space to the object space.
             world_points_3D = ProjectionUtils.camera2object(output.prev_points.proj, prev_points_25D)
+            # Project from the object space with the new ground-truth rotation.
             reproj_points_25D = ProjectionUtils.object2camera(output.next_points.proj, world_points_3D)
+            # Finally, remove the depth information
             reproj_points_2D = reproj_points_25D[:, 0:2]
 
+            # Compute ground-truth distances
             true_dists = self._keypoints_metric.dist(reproj_points_2D, output.next_points.kps)
+            # Compute ground-truth pixel matches
             true_matches = self._keypoints_criterion.apply(true_dists)
 
-            if self._phase == self._train_coarse_descriptor_phase:
-                pred_dists, pred_matches = self._matcher_warmup.match(output)
-                loss, normalization = self._loss_desc.loss(true_dists, true_matches, pred_dists, pred_matches)
-            elif self._phase == self._train_coarse_matcher_phase:
-                detached_output = MotionUtils.detach(output)
-                pred_dists, pred_matches = self._matcher.match(detached_output)
-                loss, normalization = self._loss_match.loss(true_dists, true_matches, pred_dists, pred_matches)
-            elif self._phase == self._train_fine_phase:
-                pred_dists, pred_matches = self._matcher.match(output)
-                loss, normalization = self._loss_match.loss(true_dists, true_matches, pred_dists, pred_matches)
+            self._randomizer.new_domain()
+            output.prev_points = self._randomizer.forward(output.prev_points)
+            output.next_points = self._randomizer.forward(output.next_points)
+
+            # Apply LightGlue matcher...
+            pred_dists, pred_matches = self._matcher.match(output)
+            # ...and compute loss function
+            loss, normalization = self._loss_match.loss(true_dists, true_matches, pred_dists, pred_matches)
 
             batch_loss += loss
             batch_normalization += normalization
             
             if true_matches.count_nonzero() > 0:
+                # Avoid NaNs by ensuring there are always some valid ground-truth elements
                 batch_stats.append(Statistics(true_dists.detach(), true_matches.detach(), pred_matches.detach()))                    
             
+        # The normalization is only used to facilitate visualization when plotting the loss function. It doesn't affect the Adam.
         return (batch_loss / batch_normalization, batch_stats)
