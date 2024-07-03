@@ -39,8 +39,8 @@ def main(args=None):
     matcher_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("matcher_config").items()))
     filter_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("filter_config").items()))
 
-    world_size = 2
-
+    world_size = 4
+    
     torch.multiprocessing.spawn(dispatch,
         args=(world_size, train_size, validate_size, input_params, descriptor_params, matcher_params, filter_params),
         nprocs=world_size,
@@ -53,7 +53,7 @@ def setup(rank, world_size):
     os.environ['MASTER_PORT'] = '42666'
 
     # initialize the process group
-    torch.distributed.init_process_group("nccl", rank=rank, world_size=world_size)
+    torch.distributed.init_process_group("gloo", rank=rank, world_size=world_size)
         
 def cleanup():
     torch.distributed.destroy_process_group()

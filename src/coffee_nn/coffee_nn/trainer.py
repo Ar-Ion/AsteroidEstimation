@@ -21,7 +21,7 @@ class Trainer(ABC):
         self._gpu = gpu
 
         # Logger
-        if gpu.device.index == 0: # Create only one logger
+        if gpu.main: # Create only one logger
             names = [model_container.__class__.__name__ for model_container in model_containers]
             self._logger = Logger("@".join(names)) # Create a readable name. e.g. COFFEEDescriptor@LightglueMatcher
         else:
@@ -31,9 +31,9 @@ class Trainer(ABC):
         self._params = chain(*[model_container.model.parameters() for model_container in model_containers])
         self._optimizer = torch.optim.Adam(self._params , lr=lr, weight_decay=weight_decay)
         self._scheduler = torch.optim.lr_scheduler.ExponentialLR(self._optimizer, gamma=gamma)
-                
+
     # Main loop. Called by the ROS node. Supposedly trains the neural network.
-    def loop(self):
+    def loop(self):        
         while self._phase != None:
             # Training
             train_losses = []
@@ -44,12 +44,16 @@ class Trainer(ABC):
                                         
             # Run model on training set   
             for batch in self._phase.train_dataloader: 
+                
                 self._optimizer.zero_grad()
                 batch_gpu = MotionUtils.to(batch, device=self._gpu.device)
+                
                 (loss, stats) = self.forward(batch_gpu)
+
                 train_losses.append(loss.detach().item())
                 train_stats.extend(stats)
                 loss.backward()
+
                 torch.nn.utils.clip_grad_norm_(self._params, 10) # Life-saving black magic      
                 self._optimizer.step()
                                 

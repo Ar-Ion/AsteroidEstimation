@@ -42,7 +42,6 @@ class AsteroidMotionDataset(Dataset):
             return DataLoader(
                 dataset, 
                 batch_size=batch_size, 
-                num_workers=8,
                 shuffle=False, 
                 collate_fn=AsteroidMotionDataset._collate_for_evaluation,
                 drop_last=drop_last
@@ -51,7 +50,6 @@ class AsteroidMotionDataset(Dataset):
             return DataLoader(
                 dataset, 
                 batch_size=batch_size, 
-                num_workers=8,
                 shuffle=False, 
                 collate_fn=AsteroidMotionDataset._collate_for_training,
                 drop_last=drop_last

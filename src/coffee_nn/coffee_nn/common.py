@@ -18,7 +18,7 @@ class Model:
         cuda_model = wrapped_model.to(self._gpu.device)
 
         if gpu.ddp:
-            ddp_model = torch.nn.parallel.DistributedDataParallel(cuda_model, device_ids=[self._gpu.device], find_unused_parameters=True)
+            ddp_model = torch.nn.parallel.DistributedDataParallel(cuda_model, device_ids=[self._gpu.device])
             sync_model = ME.MinkowskiSyncBatchNorm.convert_sync_batchnorm(ddp_model)
             sync_model._set_static_graph()
             self.model = sync_model

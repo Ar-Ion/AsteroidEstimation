@@ -14,14 +14,14 @@ class AsyncEvent:
         
 class AsyncFrontend:
 
-    def __init__(self, frontend, num_workers=16, wait=True, is_random=False):  
+    def __init__(self, frontend, num_workers=4, wait=True, is_random=False):  
         self._frontend = frontend
         self._wait = wait
         
         self._resource_counter = multiprocessing.Value(ctypes.c_longlong, 0)
         self._alive = multiprocessing.Value(ctypes.c_bool, True)    
-        self._input_queue = multiprocessing.Queue(512)
-        self._output_queue = multiprocessing.Queue(512)
+        self._input_queue = multiprocessing.Queue(32)
+        self._output_queue = multiprocessing.Queue(32)
         
         # Add affine coefficients for random number generation
         self._is_random = is_random
