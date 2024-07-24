@@ -54,7 +54,7 @@ class Trainer(ABC):
                 train_stats.extend(stats)
                 loss.backward()
 
-                torch.nn.utils.clip_grad_norm_(self._params, 10) # Life-saving black magic      
+                # torch.nn.utils.clip_grad_norm_(self._params, 10) # Life-saving black magic      
                 self._optimizer.step()
                                 
             self._scheduler.step()

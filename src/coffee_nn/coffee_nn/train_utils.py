@@ -1,3 +1,4 @@
+import torch
 from .dataset import AsteroidMotionDataset
 
 class TrainDataProvider:
@@ -11,7 +12,7 @@ class TrainPhase:
         iter_validate_size = validate_dp.size // iter_ratio
         
         #normalization = lambda x: (x - 1.458) / 0.2087 # This one is for 1024 input dim
-        normalization = lambda x: (x - 1.458) / 0.2087 # This one is for 256 input dim
+        normalization = lambda x: (x - 1.458) / 0.2087 + torch.normal(torch.zeros_like(x), 0.1)
       
         train_dataset = AsteroidMotionDataset(train_dp.frontend, iter_train_size, transform=normalization)
         validate_dataset = AsteroidMotionDataset(validate_dp.frontend, iter_validate_size, transform=normalization)

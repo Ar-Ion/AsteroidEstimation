@@ -79,7 +79,7 @@ class PointsUtils(Transformable, Batchable, Torchable, Chunkable):
         collated_proj = [x.proj for x in points_data_list]
 
         # Add batch dimension
-        batched_kps = ME.utils.batched_coordinates(collated_kps)
+        batched_kps = ME.utils.batched_coordinates(collated_kps, dtype=collated_kps[0].dtype, device=collated_kps[0].device)
 
         # Concatenate all lists
         batched_depths = torch.concatenate(collated_depths, 0)

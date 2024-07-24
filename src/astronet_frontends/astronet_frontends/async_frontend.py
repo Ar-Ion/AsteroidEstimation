@@ -1,4 +1,5 @@
 import threading
+import time
 import multiprocessing
 import queue
 import ctypes
@@ -22,10 +23,11 @@ class AsyncFrontend:
         self._alive = multiprocessing.Value(ctypes.c_bool, True)    
         self._input_queue = multiprocessing.Queue(32)
         self._output_queue = multiprocessing.Queue(32)
+        self._flushed = multiprocessing.Event()
         
         # Add affine coefficients for random number generation
         self._is_random = is_random
-        
+
         # Defines an async subprocess to speed up the data transmission/reception pipeline.
         # Arguments are passed as simple object and queues to simplify memory management.
         self._processes = []
@@ -38,7 +40,7 @@ class AsyncFrontend:
                         self._alive,
                         self._frontend, 
                         self._input_queue, 
-                        self._output_queue,
+                        self._output_queue
                     )
                 )
             )
@@ -49,10 +51,12 @@ class AsyncFrontend:
                 self._alive,
                 self._resource_counter, 
                 self._input_queue,
+                self._flushed,
+                self._frontend.size,
                 self._is_random
             )
         )
-        
+                
     def start(self):
         for process in self._processes:
             process.start()
@@ -101,17 +105,20 @@ class AsyncFrontend:
             except KeyboardInterrupt:
                 break # Parent process decided to terminate the frontend
                         
-    def run_scheduler(alive, resource_counter, input_queue, is_random):                
+    def run_scheduler(alive, resource_counter, input_queue, flushed, size, is_random):                
         while alive.value:
             try:
                 with resource_counter.get_lock():
                     input_queue.put((resource_counter.value, None))
-                    
+                                        
                     if is_random:
-                        random.seed(resource_counter.value)
-                        resource_counter.value = random.randint(0, 65536*65536)
+                        resource_counter.value = random.getrandbits(31)
                     else:
                         resource_counter.value = resource_counter.value + 1
+                        
+                    if resource_counter.value % size == 0:
+                        flushed.wait()
+                        flushed.clear()
             except KeyboardInterrupt:
                 break # Parent process decided to terminate the frontend
                                        
@@ -121,8 +128,7 @@ class AsyncFrontend:
             self._input_queue.put((self._resource_counter.value, data))
             
             if self._is_random:
-                random.seed(self._resource_counter.value)
-                self._resource_counter.value = random.randint(0, 2**31-1)
+                self._resource_counter.value = random.getrandbits(31)
             else:
                 self._resource_counter.value = self._resource_counter.value + 1
             
@@ -131,6 +137,10 @@ class AsyncFrontend:
     def receive(self, blocking=False):
         try:
             (id, data) = self._output_queue.get(blocking)
+                                            
+            if self._output_queue.qsize() == 0 and self._input_queue.qsize() == 0:
+                self._flushed.set()
+                        
             return data
         except queue.Empty:
             return None

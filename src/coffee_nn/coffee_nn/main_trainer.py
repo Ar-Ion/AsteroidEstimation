@@ -22,7 +22,7 @@ class MainTrainer(Trainer):
         validate_dp = TrainDataProvider(validate_frontend, int(validate_size))
         
         # 512 iterations per epoch, Batch size of 8, running for 100 epochs
-        self._main_phase = TrainPhase(train_dp, validate_dp, 512, 8, 100) # Active for 100 epochs
+        self._main_phase = TrainPhase(train_dp, validate_dp, 512, 32, 100) # Active for 100 epochs
         
         # Model instantiation
         self._descriptor = COFFEEDescriptor(gpu=gpu, autoload=False, **descriptor_params)
@@ -32,7 +32,7 @@ class MainTrainer(Trainer):
         self._randomizer = Randomizer(1024, 1024, 0.5, 0.5)
 
         # Call parent constructor
-        super().__init__(gpu, [self._descriptor, self._matcher], self._main_phase, lr=0.0001)
+        super().__init__(gpu, [self._descriptor, self._matcher], self._main_phase, lr=0.001)
 
         ## Loss function metrics 
         self._loss_match = CrossEntropyLoss() # Cross-entropy, as specified in the LightGlue/SuperGlue paper
@@ -41,23 +41,23 @@ class MainTrainer(Trainer):
         # The MinRatio is used to force a maximum of one match per pixel, as required by the optimal transport algorithm. 
         # The LessThen force matches to be pixels less than a given distance. Technically, the number should be sqrt(2) 
         # to match all neighbouring pixels but sometimes, the surface is smooth and the shadow doesn't by exactly one pixel.
-        self._keypoints_criterion = Intersection(MinRatio(1.0), LessThan(4))
+        self._keypoints_criterion = Intersection(MinRatio(1), LessThan(1))
         
     ## Forward pass methods
     # Forwards a batch to the model
     def forward(self, batch):    
         # Descriptor forward (training)
         batch_output = self._descriptor.forward_motion(batch)
-        
+
         batch_loss = 0
         batch_normalization = 0
 
         batch_stats = []
                             
-        for idx in range(batch_output.num_batches):
+        for idx in range(batch.num_batches):
             # Compute loss sample per sample to save memory (can be improved for sure)
             output = MotionUtils.retrieve(batch_output, idx)
-            
+
             # First, concatenate the ground-truth depth to the keypoints. prev_points_25D is then the depth image, as seen from the camera.
             prev_points_25D = torch.hstack((output.prev_points.kps, output.prev_points.depths[:, None]))
             # Then, back-project from the camera space to the object space.

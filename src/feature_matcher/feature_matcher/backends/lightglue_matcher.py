@@ -34,7 +34,7 @@ class LightglueMatcher(Model, Matcher):
         
         scores = output["scores"][0]
         
-        pred_dists = scores[:-1, :-1].exp() # Remove dustbin and convert log-score to score
-        pred_matches = self._criterion.apply(pred_dists)
+        pred_dists = scores # Remove dustbin and convert log-score to score
+        pred_matches = self._criterion.apply(pred_dists[:-1, :-1].exp())
                 
         return pred_dists, pred_matches

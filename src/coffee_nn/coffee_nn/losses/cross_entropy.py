@@ -11,13 +11,11 @@ class CrossEntropyLoss(LossFunction):
         true_matches_smoothed = (1-self._eps)*true_matches + self._eps*u/true_matches.shape[0]
         
         true_bins = torch.maximum(torch.tensor(0), true_matches_smoothed)
-        pred_bins = torch.maximum(torch.tensor(0), pred_dists)
-        true_dustbin = torch.maximum(torch.tensor(0), 1 - true_matches_smoothed.sum(dim=0))
-        pred_dustbin = torch.maximum(torch.tensor(0), 1 - pred_dists.sum(dim=0))
+        true_dustbin1 = torch.maximum(torch.tensor(0), 1 - true_matches_smoothed.sum(dim=0))
+        true_dustbin2 = torch.maximum(torch.tensor(0), 1 - true_matches_smoothed.sum(dim=1))
         
-        truth = torch.nn.functional.normalize(torch.vstack((true_bins, true_dustbin)), dim=0, p=1)
-        pred = torch.nn.functional.normalize(torch.vstack((pred_bins, pred_dustbin)), dim=0, p=1)
+        truth = torch.hstack((torch.vstack((true_bins, true_dustbin1[None, :])), torch.vstack((true_dustbin2[:, None], torch.tensor(0)))))
         
-        gain = torch.log(torch.maximum(torch.tensor(1e-12), pred)) * truth
+        reward = pred_dists * truth
     
-        return -gain.sum(), 1
+        return -reward.sum(), 1 # truth.sum() Normalizing the loss breaks everything in the optimizer
