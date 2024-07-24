@@ -18,7 +18,7 @@ class UntrainedCOFFEEBackend(Backend):
         if gpu != None:
             self._gpu = gpu
         else:
-            self._gpu = GPU("cuda:0")
+            self._gpu = GPU(0)
         
         module_dir = get_package_share_directory("feature_descriptor")
         cuda_module = os.path.join(module_dir, "cuda_modules", "sparsify_cuda.cpp")

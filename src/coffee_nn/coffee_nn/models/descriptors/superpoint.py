@@ -56,7 +56,7 @@ class SparseSuperPoint(ME.MinkowskiNetwork):
         self.interp = ME.MinkowskiInterpolation()
 
     def forward(self, x):
-
+        
         out = self.conv0(x)
         out_s1 = self.conv1a(out)
         out = self.conv1b(out_s1)
@@ -77,17 +77,17 @@ class SparseSuperPoint(ME.MinkowskiNetwork):
         out = self.mlp(out)
         out = self.convMap(out)
 
-        # out_coords = x.coordinates
-        # out_features = self.interp(out, out_coords.to(input.features.dtype))
+        out_coords = x.coordinates
+        out_features = self.interp(out, out_coords.to(x.features.dtype))
 
-        # out = ME.SparseTensor(out_features.contiguous(), out_coords)
+        out = ME.SparseTensor(out_features.contiguous(), out_coords)
 
         return MF.normalize(out, dim=1)
 
     def create_mlp(self, nin, nout):
         return nn.Sequential(
             ME.MinkowskiLinear(nin, nout, bias=False),
-            ME.MinkowskiInstanceNorm(nout),
+            ME.MinkowskiSyncBatchNorm(nout),
             ME.MinkowskiReLU()
         )
         
@@ -108,7 +108,7 @@ class SparseSuperPoint(ME.MinkowskiNetwork):
                 dimension=self._D,
                 bias=False
             ),
-            ME.MinkowskiInstanceNorm(nout),
+            ME.MinkowskiSyncBatchNorm(nout),
             ME.MinkowskiReLU()
         )
     
@@ -126,7 +126,7 @@ class SparseSuperPoint(ME.MinkowskiNetwork):
                 stride=2,
                 dimension=self._D
             ),
-            ME.MinkowskiInstanceNorm(nout),
+            ME.MinkowskiSyncBatchNorm(nout),
             ME.MinkowskiReLU()
         )
     
@@ -144,7 +144,7 @@ class SparseSuperPoint(ME.MinkowskiNetwork):
                 stride=2, 
                 dimension=self._D
             ),
-            ME.MinkowskiInstanceNorm(nout),
+            ME.MinkowskiSyncBatchNorm(nout),
             ME.MinkowskiReLU()
         )
     

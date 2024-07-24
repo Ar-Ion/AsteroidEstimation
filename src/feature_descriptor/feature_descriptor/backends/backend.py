@@ -1,4 +1,5 @@
 import torch
+import time
 import numpy as np
 from matplotlib import pyplot as plt
 from abc import ABC, abstractmethod
@@ -13,24 +14,36 @@ class Backend(ABC):
         self._count = 0
 
     def loop(self):
+        
+        plt.figure(dpi=200)
+        
+        time_stats = []
+                
         while self._count < self._size:
             data = self._client.receive(blocking=True)
 
             camera_data = data.robot_data.cam_data[0]
             
+            start = time.time()
             (coords, features) = self.detect_features(camera_data.image)
+            time_stats.append(time.time() - start)
             
             coords_cpu = coords.cpu()
             features_cpu = features.cpu()
-            
-            # plt.figure()
+                        
+
+            # plt.clf()
             # plt.imshow(camera_data.image, cmap='gray', vmin=0, vmax=255)
-            # plt.scatter(coords_cpu[:, 1], coords_cpu[:, 0], s=1, c='#00ff00')
+            # plt.scatter(coords_cpu[:, 1], coords_cpu[:, 0], s=1, color='#00ff00')
             # plt.xlim(0, 1024)
             # plt.ylim(1024, 0)
             # plt.show()
+            #plt.pause(0.1)
+            # plt.savefig(f"/home/arion/AsteroidRenderDetected/{self._count:04}.png")
+            
+            
+            
             # r_occurrences = camera_data.image
-
             # r_range = np.max(r_occurrences) - np.min(r_occurrences)
             # plt.figure()
             # plt.title("Distribution of reds in a sample tissue of mucinous adenocarcinoma")
@@ -64,6 +77,7 @@ class Backend(ABC):
                 print("Generated " + f"{self._count/self._size:.0%}" + " of synthetic feature data")
 
         print("All synthetic data has been generated")
+        print(f"Average description time: {np.median(time_stats)}")
 
     @abstractmethod
     def detect_features(self, image):

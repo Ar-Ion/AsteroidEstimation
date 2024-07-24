@@ -4,3 +4,12 @@
 [submodule "src/slam/slam/pyslam"]
 	path = src/slam/slam/pyslam
 	url = https://github.com/luigifreda/pyslam.git
+[submodule "src/feature_descriptor/feature_descriptor/backends/pycudasift"]
+	path = src/feature_descriptor/feature_descriptor/backends/pycudasift
+	url = https://github.com/rayhou0710/pycudasift
+[submodule "src/pycudasift"]
+	path = src/pycudasift
+	url = https://github.com/rayhou0710/pycudasift
+[submodule "src/pypopsift"]
+	path = src/pypopsift
+	url = https://github.com/OpenDroneMap/pypopsift

@@ -63,14 +63,15 @@ class SLAMBackend:
                             pyslam_config.DistCoef, pyslam_config.cam_settings['Camera.fps'])
     
         
-        num_features=2000 
+        num_features=200
 
-        tracker_type = FeatureTrackerTypes.DES_BF      # descriptor-based, brute force matching with knn 
-        #tracker_type = FeatureTrackerTypes.DES_FLANN  # descriptor-based, FLANN-based matching 
+        #tracker_type = FeatureTrackerTypes.LIGHTGLUE      # descriptor-based, brute force matching with knn 
+        tracker_type = FeatureTrackerTypes.DES_BF  # descriptor-based, FLANN-based matching 
+        #tracker_type = FeatureTrackerTypes.COSINE  # descriptor-based, FLANN-based matching 
 
         # select your tracker configuration (see the file feature_tracker_configs.py) 
         # FeatureTrackerConfigs: SHI_TOMASI_ORB, FAST_ORB, ORB, ORB2, ORB2_FREAK, ORB2_BEBLID, BRISK, AKAZE, FAST_FREAK, SIFT, ROOT_SIFT, SURF, SUPERPOINT, FAST_TFEAT, CONTEXTDESC
-        tracker_config = FeatureTrackerConfigs.COFFEE
+        tracker_config = FeatureTrackerConfigs.ORB
         tracker_config['num_features'] = num_features
         tracker_config['tracker_type'] = tracker_type
         
@@ -112,35 +113,35 @@ class SLAMBackend:
                 camera_data = data.robot_data.cam_data[0]        
                 img_id = count
 
-                plt.imshow(camera_data.image)
-                plt.pause(1.0)
+                # plt.imshow(camera_data.image)
+                # plt.pause(1.0)
 
-                # img = np.swapaxes(camera_data.image, 0, 1)
+                img = np.swapaxes(camera_data.image, 0, 1)
                                 
-                # self._slam.track(img, img_id, count)  # main SLAM function 
+                self._slam.track(img, img_id, count)  # main SLAM function 
                 
-                # pose = self._slam.tracking.f_cur.pose
-                # proj = self.get_projection(data)
+                pose = self._slam.tracking.f_cur.pose
+                proj = self.get_projection(data)
 
-                # if prev_proj != None:
-                #     R = pose[:3, :3] @ prev_pose[:3, :3].T
+                if prev_proj != None:
+                    R = pose[:3, :3] @ prev_pose[:3, :3].T
 
-                #     extrinsics_prev = prev_proj.extrinsics.M.cpu().numpy()
-                #     extrinsics_next = proj.extrinsics.M.cpu().numpy()
+                    extrinsics_prev = prev_proj.extrinsics.M.cpu().numpy()
+                    extrinsics_next = proj.extrinsics.M.cpu().numpy()
                 
-                #     ground_truth = extrinsics_next[:3, :3] @ extrinsics_prev[:3, :3].T
-                #     error = R @ ground_truth.T
+                    ground_truth = extrinsics_next[:3, :3] @ extrinsics_prev[:3, :3].T
+                    error = R @ ground_truth.T
 
-                #     error_vec, _ = cv2.Rodrigues(error)
-                #     mag_vec, _ = cv2.Rodrigues(ground_truth)
+                    error_vec, _ = cv2.Rodrigues(error)
+                    mag_vec, _ = cv2.Rodrigues(ground_truth)
                     
-                #     errors.append(np.linalg.norm(error_vec) / np.linalg.norm(mag_vec))
-                #     error_matrices.append(error)
+                    errors.append(np.linalg.norm(error_vec) / np.linalg.norm(mag_vec))
+                    error_matrices.append(error)
 
-                # count += 1
+                count += 1
 
-                # prev_proj = proj
-                # prev_pose = pose
+                prev_proj = proj
+                prev_pose = pose
 
             np_errors = np.array(errors)
             np_error_matrices = np.array(error_matrices)

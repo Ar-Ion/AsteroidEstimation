@@ -1,6 +1,7 @@
 import torch
+from matplotlib import pyplot as plt
 
-from feature_matcher.backends.criteria import MatchCriterion, GreaterThan
+from feature_matcher.backends.criteria import MatchCriterion, GreaterThan, LessThan, Intersection, MinRatio
 from feature_matcher.backends.metrics import MatchMetric
 from feature_matcher.backends import Matcher
 from astronet_utils import MotionUtils, PointsUtils, ProjectionUtils
@@ -48,7 +49,7 @@ class SimpleStats:
         while count < self._size:
             input = self._frontend.receive(blocking=True)
                         
-            #chunks = MotionUtils.create_chunks(input, 1024, 1024)
+            # chunks = MotionUtils.create_chunks(input, 1024, 1024)
 
             # valid_chunks = list(filter(MotionUtils.is_valid, chunks))
             
@@ -69,12 +70,27 @@ class SimpleStats:
                 true_matches = self._keypoints_criterion.apply(true_dists)
                                 
                 pred_dists, pred_matches = self._matcher.match(data)
+                         
+                indices = torch.nonzero(pred_matches)
+        
+                all_coords_prev = data.prev_points.kps
+                all_coords_next = data.next_points.kps
+                                
+                coords_prev = all_coords_prev[indices[:, 0]]
+                coords_next = all_coords_next[indices[:, 1]]
+                
+                # print(coords_prev - coords_next)
+
+                # plt.figure()
+                # hist = (coords_prev - coords_next).to(dtype=torch.float).norm(p=1, dim=1).cpu()
+                # plt.hist(hist[None, :], bins=50)
+                # plt.show()
                 
                 local_stats = Statistics(true_dists, true_matches, pred_matches)
-                 
+                local_feature_count = 0.5*(data.prev_points.features.size(0) + data.next_points.features.size(0))
+
                 stats.append(local_stats)  
-       
-                feature_count += 0.5*(data.prev_points.features.size(0) + data.prev_points.features.size(0))
+                feature_count += local_feature_count
                 
             count += 1
 

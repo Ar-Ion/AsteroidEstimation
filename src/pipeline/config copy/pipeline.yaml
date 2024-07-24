@@ -1,0 +1,124 @@
+gen_descriptor:
+  ros__parameters:
+    input:
+      type: "DriveClientFrontend"
+      path: "/home/arion/AsteroidImageDataset"
+
+    output:
+      type: "DriveServerFrontend"
+      path: "/home/arion/AsteroidFeatureDataset"
+
+    descriptor_config:
+      max_features: 16384
+
+gen_synthesizer:
+  ros__parameters:
+    input:
+      type: "DriveClientFrontend"
+      path: "/home/arion/AsteroidFeatureDataset"
+
+    output:
+      type: "DriveServerFrontend"
+      path: "/home/arion/AsteroidMotionDataset"
+
+gen_chunkifier:
+  ros__parameters:
+    input:
+      type: "DriveClientFrontend"
+      path: "/home/arion/AsteroidMotionDataset"
+
+    output:
+      type: "DriveServerFrontend"
+      path: "/home/arion/AsteroidChunkedMotionDataset"
+
+gen_verifier:
+  ros__parameters:
+    input:
+      type: "DriveClientFrontend"
+      path: "/home/arion/AsteroidChunkedMotionDataset"
+
+main_trainer:
+  ros__parameters:
+    input:
+      type: "DriveClientFrontend"
+      path: "/home/arion/AsteroidChunkedMotionDataset"
+
+    descriptor_config:
+      model_path: "/home/arion/AsteroidDescriptorModel.pth"
+
+    matcher_config:
+      model_path: "/home/arion/AsteroidMatcherModel.pth"
+
+    filter_config:
+      model_path: "/home/arion/AsteroidFilterModel.pth"
+
+filter_trainer:
+  ros__parameters:
+    input:
+      type: "DriveClientFrontend"
+      path: "/home/arion/AsteroidChunkedMotionDataset"
+      
+    filter_config:
+      model_path: "/home/arion/AsteroidFilterModel.pth"
+
+eval_descriptor:
+  ros__parameters:     
+    input:
+      type: "DriveClientFrontend"
+      path: "/home/arion/AsteroidImageDataset"
+
+    output:
+      type: "DriveServerFrontend"
+
+    descriptor_config:
+      descriptor_model_path: "/home/arion/AsteroidDescriptorModel16Jul.pth"
+      max_features: 16384
+
+eval_synthesizer:
+  ros__parameters:
+    input:
+      type: "DriveClientFrontend"
+
+    output:
+      type: "DriveServerFrontend"
+
+eval_benchmarker:
+  ros__parameters:
+    input:
+      type: "DriveClientFrontend"
+
+    output:
+      type: "Plots"
+
+    images:
+      type: "DriveClientFrontend"
+      path: "/home/arion/AsteroidImageDataset"
+
+eval_vo:
+  ros__parameters:
+    input:
+      type: "DriveClientFrontend"
+
+    output:
+      type: "Plots"
+
+eval_slam:
+  ros__parameters:
+    input:
+      type: "DriveClientFrontend"
+      path: "/home/arion/AsteroidImageDataset"
+
+    output:
+      type: "Plots"
+
+    descriptor_config:
+      descriptor_model_path: "/home/arion/AsteroidDescriptorModel16Jul.pth"
+      max_features: 16384
+
+eval_feature_matcher:
+  ros__parameters:
+    input:
+      type: "DriveClientFrontend"
+
+    output:
+      type: "Plots"

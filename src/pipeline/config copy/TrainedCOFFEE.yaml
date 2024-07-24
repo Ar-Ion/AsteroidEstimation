@@ -1,0 +1,50 @@
+eval_benchmarker:
+  ros__parameters: 
+    config:
+      keypoints:
+        metric: "L2"
+        criterion: "LessThan"
+        criterion_args: [4.0]
+
+      features:
+        matcher: "LightglueMatcher"
+        matcher_args: ["/home/arion/AsteroidMatcherModel16Jul.pth"]
+        criterion: "MaxK"
+        criterion_args: [200.0]
+        # matcher: "ClassicalMatcher"
+        # matcher_args: ["Cosine"]
+        # criterion: "GreaterThan"
+        # criterion_args: [0.9]
+
+eval_vo:
+  ros__parameters: 
+    config:
+      # matcher: "LightglueMatcher"
+      # matcher_args: ["/home/arion/AsteroidMatcherModel16Jul.pth"]
+      # criterion: "MaxK"
+      # criterion_args: [200.0]
+      matcher: "ClassicalMatcher"
+      matcher_args: ["Cosine"]
+      criterion: "GreaterThan"
+      criterion_args: [0.9]
+
+eval_slam:
+  ros__parameters: 
+    config:
+      filter: "SparseFilter"
+      filter_args: ["/home/arion/AsteroidFilterModel.pth"]
+      matcher: "LightglueMatcher"
+      matcher_args: ["/home/arion/AsteroidMatcherModel.pth"]
+      criterion: "MaxK"
+      criterion_args: [200.0]
+
+# For GreaterThan > criterion_args: [0.75]
+
+# [node-3] Average accuracy: 0.9998825788497925
+# [node-3] Average precision: 0.5365274548530579
+# [node-3] Average recall: 0.7701255083084106
+# [node-3] Average F1 score: 0.6321170926094055
+# [node-3] Average feature count: 8891.0
+# [node-3] Average true count: 5691.0
+# [node-3] Average positive count: 8199.75
+# [node-3] Average pixel location error: 1.3156979084014893

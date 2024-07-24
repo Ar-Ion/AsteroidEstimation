@@ -33,7 +33,7 @@ def create_nodes(context, run_params, dataset_params):
     backend = context.perform_substitution(run_params["descriptor_config.backend"])
     size = context.perform_substitution(run_params["size"])
     skip_synthesis = context.perform_substitution(run_params["skip_synthesis"])
-    
+
     matcher_params = os.path.join(get_package_share_directory('pipeline'), 'config', backend + '.yaml')
 
     descriptor_io_override = {
@@ -44,7 +44,7 @@ def create_nodes(context, run_params, dataset_params):
         "input.path": eval_dir + "/" + backend + "/Features",
         "output.path": eval_dir + "/" + backend + "/Motion"
     }
-
+    
     benchmarker_io_override = {
         "input.path": eval_dir + "/" + backend + "/Motion",
         "output.path": eval_dir + "/" + backend + "/Benchmark"
@@ -79,6 +79,8 @@ def create_nodes(context, run_params, dataset_params):
             synthesizer_io_override
         ]
     )
+    
+    del run_params["size"]
 
     benchmarker = Node(
         package="benchmark",

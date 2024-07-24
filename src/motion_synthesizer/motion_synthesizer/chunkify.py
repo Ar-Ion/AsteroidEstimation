@@ -7,7 +7,7 @@ from .chunkifier import Chunkifier
 def main(args=None):
     rclpy.init(args=args)
     
-    node = rclpy.create_node("motion_synthesizer_node")
+    node = rclpy.create_node("chunkifier_node")
     
     node.declare_parameter("size", rclpy.Parameter.Type.INTEGER)
     node.declare_parameter("mode", rclpy.Parameter.Type.STRING)

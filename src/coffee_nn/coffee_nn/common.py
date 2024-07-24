@@ -12,16 +12,15 @@ class Model:
         if gpu != None:
             self._gpu = gpu
         else:
-            self._gpu = GPU("cuda:0")
+            self._gpu = GPU(0)
 
         # Model instantiation
         cuda_model = wrapped_model.to(self._gpu.device)
-
-        if gpu.ddp:
+        
+        if self._gpu.ddp:
             ddp_model = torch.nn.parallel.DistributedDataParallel(cuda_model, device_ids=[self._gpu.device])
-            sync_model = ME.MinkowskiSyncBatchNorm.convert_sync_batchnorm(ddp_model)
-            sync_model._set_static_graph()
-            self.model = sync_model
+            ddp_model._set_static_graph()
+            self.model = ddp_model
         else:
             self.model = cuda_model
         
@@ -32,10 +31,16 @@ class Model:
             self.load()
             
     def load(self):
-        self.model.load_state_dict(torch.load(self._model_path))
+        if self._gpu.ddp:
+            self.model.module.load_state_dict(torch.load(self._model_path))
+        else:
+            self.model.load_state_dict(torch.load(self._model_path))
         
     def save(self):
-        torch.save(self.model.state_dict(), self._model_path)
+        if self._gpu.ddp:
+            torch.save(self.model.module.state_dict(), self._model_path)
+        else:
+            torch.save(self.model.state_dict(), self._model_path)
         
     
 # Just defines some helper forward functions to be used with the MinkowskiEngine

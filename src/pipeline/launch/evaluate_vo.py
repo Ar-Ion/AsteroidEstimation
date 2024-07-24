@@ -58,7 +58,7 @@ def create_nodes(context, run_params, dataset_params):
     size_override = {
         "size": int(int(size)/2),
     }
-
+    
     descriptor = Node(
         package="feature_descriptor",
         executable="node",
@@ -84,6 +84,8 @@ def create_nodes(context, run_params, dataset_params):
             synthesizer_io_override
         ]
     )
+    
+    del run_params["size"]
     
     vo = Node(
         package="visual_odometry",

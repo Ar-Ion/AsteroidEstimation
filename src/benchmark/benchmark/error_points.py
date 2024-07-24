@@ -44,8 +44,9 @@ class ErrorPoints:
         torch.set_default_device(self._device)
         print("GPU loaded. Using compute device: " + str(self._device))
 
-    def loop(self):                
-        param_sweep = torch.linspace(0.0, 1, 50)
+    def loop(self):
+        baseline = torch.log10(torch.tensor(self._matcher_criterion_args[0]))
+        param_sweep = torch.logspace(baseline - 1, baseline + 1, 100)
         error_points = []
         
         for param_idx in range(len(param_sweep)):
@@ -100,9 +101,9 @@ class ErrorPoints:
         plt.figure(figsize=(8, 6))
         plt.loglog(error_points_curve[:, 0], error_points_curve[:, 1], marker='o', linestyle='-')
         plt.xlabel('Number of points')
-        plt.ylabel('Error')
+        plt.ylabel('Error [pixels]')
         plt.title('Error-Points Curve')
         plt.grid(True)
-        plt.xlim([1, 1e3])
-        plt.ylim([1, 1e3])
+        plt.xlim([1e0, 1e4])
+        #plt.ylim([1e-1, 1e1])
         plt.show()

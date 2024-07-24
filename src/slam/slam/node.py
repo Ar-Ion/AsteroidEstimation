@@ -35,7 +35,7 @@ def main(args=None):
     config = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("config").items()))
 
     frontend_wrapped = astronet_frontends.factory.instance(input_params, mode, size)
-    frontend = AsyncFrontend(frontend_wrapped, wait=False)
+    frontend = AsyncFrontend(frontend_wrapped, wait=False, num_workers=1)
     frontend.start()
 
     slam = SLAMBackend(frontend, size, config)

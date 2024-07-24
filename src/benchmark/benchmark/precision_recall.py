@@ -1,4 +1,6 @@
+import os
 import torch
+import pandas as pd
 from matplotlib import pyplot as plt
 
 from feature_matcher.backends.criteria import MatchCriterion
@@ -10,14 +12,15 @@ from astronet_frontends import DriveClientFrontend
 from .statistics import Statistics
 
 class PrecisionRecall:
-    def __init__(self, frontend, size, config):
+    def __init__(self, frontend, size, config, output_params):
         self._frontend = frontend
         self._size = size
        
         keypoints_criterion_args = config["keypoints.criterion_args"]
         features_criterion_args = config["features.criterion_args"]
         matcher_args = config["features.matcher_args"]
-        
+        plots_dir = os.path.join(output_params["path"], "precision_recall")
+    
         if not keypoints_criterion_args:
             keypoints_criterion_args = []
             
@@ -26,6 +29,12 @@ class PrecisionRecall:
             
         if not matcher_args:
             matcher_args = []
+            
+        os.makedirs(plots_dir, exist_ok=True)
+
+        self._f1_csv_out = os.path.join(plots_dir, "f1.csv")
+        self._pr_csv_out = os.path.join(plots_dir, "pr.csv")
+        self._roc_csv_out = os.path.join(plots_dir, "roc.csv")
 
         self._keypoints_metric = MatchMetric.instance(config["keypoints.metric"])
         self._keypoints_criterion = MatchCriterion.instance(config["keypoints.criterion"], *keypoints_criterion_args)
@@ -39,9 +48,13 @@ class PrecisionRecall:
         print("GPU loaded. Using compute device: " + str(self._device))
 
     def loop(self):                
-        param_sweep = torch.linspace(0, 4*self._matcher_criterion_args[0], 100)
+        baseline = torch.log10(torch.tensor(self._matcher_criterion_args[0]))
+        param_sweep = torch.logspace(baseline - 0.5, baseline + 0.3, 100)
+        #param_sweep = torch.linspace(0, 1, 100)
+        
         precision_recall = []
         f1 = []
+        roc = []
         
         for param_idx in range(len(param_sweep)):
             
@@ -77,7 +90,7 @@ class PrecisionRecall:
                 
                 count += 1
 
-                if count % 100 == 0:
+                if count % 10 == 0:
                     print("Computed statistics for " + f"{count/self._size:.0%}" + " of the described data")
 
             print("Precision-recall sweep status: " + f"{param_idx/len(param_sweep):.0%}")
@@ -85,12 +98,42 @@ class PrecisionRecall:
             avg_precision = torch.tensor(list(map(lambda x: x.precision(), stats))).nanmean()
             avg_recall = torch.tensor(list(map(lambda x: x.recall(), stats))).nanmean()
             avg_f1 = torch.tensor(list(map(lambda x: x.f1(), stats))).nanmean()
+            avg_fpr = torch.tensor(list(map(lambda x: x.fpr(), stats))).nanmean()
 
-            precision_recall.append(torch.tensor((avg_recall, avg_precision)))
-            f1.append(torch.tensor((param, avg_f1)))
+            if 0 <= avg_precision and avg_precision <= 1:
+                precision_recall.append(torch.tensor((avg_recall, avg_precision)))
+
+            if 0 <= avg_f1 and avg_f1 <= 1:
+                f1.append(torch.tensor((param, avg_f1)))
+                
+            if 0 <= avg_fpr and avg_fpr <= 1:
+                roc.append(torch.tensor((avg_fpr, avg_recall)))
+            
+        precision_recall.append(torch.tensor((0, 1)))
+        precision_recall.append(torch.tensor((1, 0)))
+        roc.append(torch.tensor((0, 0)))
+        roc.append(torch.tensor((1, 1)))
+        
+        precision_recall.sort(key=lambda x: x[0])
+        f1.sort(key=lambda x: x[0])
+        roc.sort(key=lambda x: x[0])
                         
         precision_recall_curve = torch.vstack(precision_recall).cpu()
         f1_curve = torch.vstack(f1).cpu()
+        roc_curve = torch.vstack(roc).cpu()
+        
+        print(f"Best F1 score: {torch.max(f1_curve[:, 1])}")
+        print(f"PR AUC score: {torch.trapz(precision_recall_curve[:, 1], precision_recall_curve[:, 0])}")
+        print(f"ROC AUC score: {torch.trapz(roc_curve[:, 1], roc_curve[:, 0])}")
+        
+        df = pd.DataFrame(precision_recall_curve)
+        df.to_csv(self._pr_csv_out)
+        
+        df = pd.DataFrame(f1_curve)
+        df.to_csv(self._f1_csv_out)
+        
+        df = pd.DataFrame(roc_curve)
+        df.to_csv(self._roc_csv_out)
                 
         plt.figure(figsize=(8, 6))
         plt.plot(precision_recall_curve[:, 0], precision_recall_curve[:, 1], marker='o', linestyle='-')
@@ -98,8 +141,14 @@ class PrecisionRecall:
         plt.ylabel('Precision')
         plt.title('Precision-Recall Curve')
         plt.grid(True)
-        plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.0])
+        plt.show()
+        
+        plt.figure(figsize=(8, 6))
+        plt.plot(roc_curve[:, 0], roc_curve[:, 1], marker='o', linestyle='-')
+        plt.xlabel('FPR')
+        plt.ylabel('TPR')
+        plt.title('ROC Curve')
+        plt.grid(True)
         plt.show()
         
         plt.figure(figsize=(8, 6))

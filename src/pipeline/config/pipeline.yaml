@@ -71,8 +71,7 @@ eval_descriptor:
       type: "DriveServerFrontend"
 
     descriptor_config:
-      filter_model_path: "/home/arion/AsteroidFilterModel.pth"
-      descriptor_model_path: "/home/arion/AsteroidDescriptorModel.pth"
+      descriptor_model_path: "/home/arion/AsteroidDescriptorModel16Jul.pth"
       max_features: 16384
 
 eval_synthesizer:
@@ -91,6 +90,10 @@ eval_benchmarker:
     output:
       type: "Plots"
 
+    images:
+      type: "DriveClientFrontend"
+      path: "/home/arion/AsteroidImageDataset"
+
 eval_vo:
   ros__parameters:
     input:
@@ -103,10 +106,14 @@ eval_slam:
   ros__parameters:
     input:
       type: "DriveClientFrontend"
-      path: "/home/arion/AsteroidSimulation"
+      path: "/home/arion/AsteroidImageDataset"
 
     output:
       type: "Plots"
+
+    descriptor_config:
+      descriptor_model_path: "/home/arion/AsteroidDescriptorModel16Jul.pth"
+      max_features: 16384
 
 eval_feature_matcher:
   ros__parameters:

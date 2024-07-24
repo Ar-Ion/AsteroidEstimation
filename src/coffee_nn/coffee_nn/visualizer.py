@@ -20,5 +20,5 @@ class Visualizer:
         img[coords[:, 0], coords[:, 1]] = colors.hsv_to_rgb(hsv.T)
         
         image = Image.fromarray((img * 255).astype(np.uint8))
-        image.save(f"/home/arion/AsteroidModelVisualization/{self._count}.png")
+        image.save(f"/home/arion/AsteroidModelVisualization/{self._count:04}.png")
         self._count += 1

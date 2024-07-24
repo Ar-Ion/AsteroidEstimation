@@ -4,31 +4,41 @@ eval_benchmarker:
       keypoints:
         metric: "L2"
         criterion: "LessThan"
-        criterion_args: [2.0]
+        criterion_args: [1.0]
 
       features:
         matcher: "LightglueMatcher"
-        matcher_args: ["/home/arion/AsteroidMatcherModel.pth"]
-        criterion: "GreaterThan"
-        criterion_args: [0.05]
+        matcher_args: ["/home/arion/AsteroidMatcherModel16Jul.pth"]
+        criterion: "MaxRatio"
+        criterion_args: [1.0]
         # matcher: "ClassicalMatcher"
         # matcher_args: ["Cosine"]
-        # criterion: "GreaterThan"
-        # criterion_args: [0.75]
+        # criterion: "MaxRatio"
+        # criterion_args: [1.0]
 
 eval_vo:
+  ros__parameters: 
+    config:
+      matcher: "LightglueMatcher"
+      matcher_args: ["/home/arion/AsteroidMatcherModel16Jul.pth"]
+      criterion: "MaxK"
+      criterion_args: [500.0]
+      #matcher: "ClassicalMatcher"
+      #matcher_args: ["Cosine"]
+      # matcher: "LightglueMatcher"
+      # matcher_args: ["/home/arion/AsteroidMatcherModel16Jul.pth"]
+      # criterion: "MaxRatio"
+      # criterion_args: [0.9]
+
+eval_slam:
   ros__parameters: 
     config:
       filter: "SparseFilter"
       filter_args: ["/home/arion/AsteroidFilterModel.pth"]
       matcher: "LightglueMatcher"
       matcher_args: ["/home/arion/AsteroidMatcherModel.pth"]
-      criterion: "GreaterThan"
-      criterion_args: [0.05]
-      #   matcher: "ClassicalMatcher"
-      #   matcher_args: ["Cosine"]
-      #   criterion: "GreaterThan"
-      #   criterion_args: [0.75]
+      criterion: "MaxK"
+      criterion_args: [200.0]
 
 # For GreaterThan > criterion_args: [0.75]
 

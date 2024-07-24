@@ -9,7 +9,7 @@ from astronet_utils import MotionUtils
 from .logger import Logger
 
 class Trainer(ABC):
-    def __init__(self, gpu, model_containers, initial_phase, lr=0.001, gamma=1.0, weight_decay=0):
+    def __init__(self, gpu, model_containers, initial_phase, lr=0.001, gamma=1.0, weight_decay=0, load_opt_state=False):
         # Set models
         self._model_containers = model_containers
 
@@ -31,6 +31,12 @@ class Trainer(ABC):
         self._params = chain(*[model_container.model.parameters() for model_container in model_containers])
         self._optimizer = torch.optim.Adam(self._params , lr=lr, weight_decay=weight_decay)
         self._scheduler = torch.optim.lr_scheduler.ExponentialLR(self._optimizer, gamma=gamma)
+        
+        # Load optimizer state
+        if load_opt_state:
+            state = torch.load('opt_state.pth', map_location=gpu.device)
+            self._optimizer.load_state_dict(state['optimizer'])
+            self._scheduler.load_state_dict(state['scheduler'])
 
     # Main loop. Called by the ROS node. Supposedly trains the neural network.
     def loop(self):        
@@ -54,7 +60,7 @@ class Trainer(ABC):
                 train_stats.extend(stats)
                 loss.backward()
 
-                torch.nn.utils.clip_grad_norm_(self._params, 10) # Life-saving black magic      
+                # torch.nn.utils.clip_grad_norm_(self._params, 10) # Life-saving black magic      
                 self._optimizer.step()
                                 
             self._scheduler.step()
@@ -85,6 +91,13 @@ class Trainer(ABC):
             
             # Save the model periodically
             if self._iter % 10 == 0:
+                state = {
+                    'optimizer': self._optimizer.state_dict(),
+                    'scheduler': self._scheduler.state_dict()
+                }
+
+                torch.save(state, 'opt_state.pth')
+
                 for model_container in self._model_containers:
                     model_container.save()
                 

@@ -10,7 +10,7 @@ eval_benchmarker:
         matcher: "ClassicalMatcher"
         matcher_args: ["Hamming"]
         criterion: "MinRatio"
-        criterion_args: [0.9]
+        criterion_args: [1.0]
 
 eval_vo:
   ros__parameters: 

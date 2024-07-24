@@ -27,6 +27,11 @@ def main(args=None):
     ])
     
     node.declare_parameters("", [
+        ("images.type", rclpy.Parameter.Type.STRING),
+        ("images.path", rclpy.Parameter.Type.STRING)
+    ])
+    
+    node.declare_parameters("", [
         ("config.keypoints.metric", rclpy.Parameter.Type.STRING),
         ("config.keypoints.criterion", rclpy.Parameter.Type.STRING),
         ("config.keypoints.criterion_args", rclpy.Parameter.Type.DOUBLE_ARRAY),
@@ -40,24 +45,29 @@ def main(args=None):
     mode = node.get_parameter("mode").value
     input_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("input").items()))
     output_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("output").items()))
+    images_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("images").items()))
     config = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("config").items()))
 
     if output_params["type"] != "Plots":
         raise NotImplementedError("Supported outputs only include 'Plots'")
 
     frontend_wrapped = astronet_frontends.factory.instance(input_params, mode, size)
-    frontend = AsyncFrontend(frontend_wrapped, wait=False)
+    frontend = AsyncFrontend(frontend_wrapped, wait=False, num_workers=1)
     frontend.start()
+    
+    images_frontend_wrapped = astronet_frontends.factory.instance(images_params, mode, 2*size)
+    images_frontend = AsyncFrontend(images_frontend_wrapped, wait=False, num_workers=1)
+    images_frontend.start()
 
     simple_stats = SimpleStats(frontend, size, config)
     error_points = ErrorPoints(frontend, size, config, output_params)
-    precision_recall = PrecisionRecall(frontend, size, config)
-    visualize = Visualize(frontend, size, config)
+    precision_recall = PrecisionRecall(frontend, size, config, output_params)
+    visualize = Visualize(frontend, images_frontend, size, config)
 
     try:
         simple_stats.loop()       
         #error_points.loop()
-        #precision_recall.loop()
+        precision_recall.loop()
         visualize.loop() 
         
         rclpy.shutdown()
@@ -65,6 +75,7 @@ def main(args=None):
         pass
     finally:
         frontend.stop() 
+        images_frontend.stop() 
         
 if __name__ == '__main__':
     main()

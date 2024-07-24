@@ -1,6 +1,6 @@
 class Statistics:
     def __init__(self, true_dists, true_matches, pred_matches):
-        self._true_count = true_matches.sum() # Note that every match is counted twice, hence the division
+        self._true_count = true_matches.sum()
         self._positive_count = pred_matches.sum()
         self._tp = (true_matches * pred_matches).mean()
         self._tn = ((1-true_matches) * (1-pred_matches)).mean()
@@ -34,6 +34,9 @@ class Statistics:
 
     def recall(self):
         return self._tp / (self._tp + self._fn)
+    
+    def fpr(self):
+        return self._fp / (self._fp + self._tn)
     
     def pixel_error(self):
         return self._dist

@@ -91,7 +91,9 @@ def create_verifier_node(context, run_params, dataset_params):
     size_override = {
         "size": int(num_chunks*size/2)
     }
-    
+
+    del run_params["size"]
+
     verifier = Node(
         package="motion_synthesizer",
         executable="verify",

@@ -12,8 +12,9 @@ from astronet_frontends import DriveClientFrontend
 from .statistics import Statistics
 
 class Visualize:
-    def __init__(self, frontend, size, config):
+    def __init__(self, frontend, images_frontend, size, config):
         self._frontend = frontend
+        self._images_frontend = images_frontend
         self._size = size
        
         keypoints_criterion_args = config["keypoints.criterion_args"]
@@ -40,6 +41,13 @@ class Visualize:
         torch.set_default_device(self._device)
         print("GPU loaded. Using compute device: " + str(self._device))
 
+    def setup_axis(self, *shape):
+        ax = plt.subplot(*shape)
+        ax.set_xlim([0, 1024])
+        ax.set_ylim([0, 1024])
+        ax.grid()
+        return ax
+
     def loop(self):
         
         count = 0
@@ -49,12 +57,14 @@ class Visualize:
         
         while count < self._size:
             input = self._frontend.receive(blocking=True)
-            
+            image_prev = self._images_frontend.receive(blocking=True)
+            image_next = self._images_frontend.receive(blocking=True)
+                        
             chunks = MotionUtils.create_chunks(input, 1024, 1024)                        
             valid_chunks = list(filter(MotionUtils.is_valid, chunks))
             valid_batch = MotionUtils.batched(valid_chunks)
             valid_batch_gpu = MotionUtils.to(valid_batch, device=self._device)
-                                
+                                            
             for idx in range(valid_batch_gpu.num_batches):
                 data = MotionUtils.retrieve(valid_batch_gpu, idx)
             
@@ -73,12 +83,13 @@ class Visualize:
                 next_coords = data.next_points.kps.cpu().numpy()
                 prev_features = data.prev_points.features.cpu().numpy()
                 next_features = data.next_points.features.cpu().numpy()
+                
                                 
-                normalized_prev_features = (prev_features - np.mean(prev_features, axis=0))/np.std(prev_features, axis=0)
+                normalized_prev_features = (prev_features - np.mean(prev_features, axis=0)) / (1e-3 + np.std(prev_features, axis=0))
                 normed_prev_features = normalized_prev_features / np.reshape(np.linalg.norm(normalized_prev_features, axis=1), (-1, 1))
                 prev_colors = np.clip(0.5*(1 + normed_prev_features @ color_bases), 0, 1)
                 
-                normalized_next_features = (next_features - np.mean(next_features, axis=0))/np.std(next_features, axis=0)
+                normalized_next_features = (next_features - np.mean(next_features, axis=0)) / (1e-3 + np.std(prev_features, axis=0))
                 normed_next_features = normalized_next_features / np.reshape(np.linalg.norm(normalized_next_features, axis=1), (-1, 1))
                 next_colors = np.clip(0.5*(1 + normed_next_features @ color_bases), 0, 1)
                 
@@ -86,28 +97,59 @@ class Visualize:
                 matched_next_coords = next_coords[indices[:, 1]]
                 matched_colors = (prev_colors[indices[:, 0]] + next_colors[indices[:, 1]])/2
                 
-                fig = plt.figure(figsize=(14, 6))
-                
-                ax1 = plt.subplot(1, 2, 1)  
-                ax1.scatter(data.prev_points.kps[:, 1].cpu(), data.prev_points.kps[:, 0].cpu(), s=0.1, color=prev_colors)
-                ax1.set_xlim([0, 1024])
-                ax1.set_ylim([0, 1024])
-                ax1.grid()
+                fig1 = plt.figure(figsize=(8, 8), dpi=200)
+                self.setup_axis(1, 1, 1)
+                plt.imshow(image_prev.robot_data.cam_data[0].image, cmap='gray')
+                plt.scatter(data.prev_points.kps[:, 1].cpu(), data.prev_points.kps[:, 0].cpu(), s=0.1, c='#ffaa00')
+                plt.savefig(f"/home/arion/AsteroidRenderDetected/{count*2:04}.png")
+                plt.close()
 
-                ax2 = plt.subplot(1, 2, 2)  
-                ax2.scatter(data.next_points.kps[:, 1].cpu(), data.next_points.kps[:, 0].cpu(), s=0.1, color=next_colors)
-                ax2.set_xlim([0, 1024])
-                ax2.set_ylim([0, 1024])
-                ax2.grid()
+                fig2 = plt.figure(figsize=(8, 8), dpi=200)
+                self.setup_axis(1, 1, 1)
+                plt.imshow(image_next.robot_data.cam_data[0].image, cmap='gray')
+                plt.scatter(data.next_points.kps[:, 1].cpu(), data.next_points.kps[:, 0].cpu(), s=0.1, c='#ffaa00')
+                plt.savefig(f"/home/arion/AsteroidRenderDetected/{count*2+1:04}.png")
+                plt.close()
                 
+                fig3 = plt.figure(figsize=(8, 8), dpi=200)
+                self.setup_axis(1, 1, 1)
+                plt.imshow(image_prev.robot_data.cam_data[0].image, cmap='gray')
+                plt.scatter(data.prev_points.kps[:, 1].cpu(), data.prev_points.kps[:, 0].cpu(), s=0.1, color=prev_colors)
+                plt.savefig(f"/home/arion/AsteroidRenderDescribed/{count*2:04}.png")
+                plt.close()
+
+                fig4 = plt.figure(figsize=(8, 8), dpi=200)
+                self.setup_axis(1, 1, 1)
+                plt.imshow(image_next.robot_data.cam_data[0].image, cmap='gray')
+                plt.scatter(data.next_points.kps[:, 1].cpu(), data.next_points.kps[:, 0].cpu(), s=0.1, color=next_colors)
+                plt.savefig(f"/home/arion/AsteroidRenderDescribed/{count*2+1:04}.png")
+                plt.close()
+
+                fig5 = plt.figure(figsize=(18, 8), dpi=200)
+                
+                ax1 = self.setup_axis(1, 2, 1)
+                plt.imshow(image_prev.robot_data.cam_data[0].image, cmap='gray')
+                plt.scatter(data.prev_points.kps[:, 1].cpu(), data.prev_points.kps[:, 0].cpu(), s=0.1, color=prev_colors)
+                
+                ax2 = self.setup_axis(1, 2, 2)
+                plt.imshow(image_next.robot_data.cam_data[0].image, cmap='gray')
+                plt.scatter(data.next_points.kps[:, 1].cpu(), data.next_points.kps[:, 0].cpu(), s=0.1, color=next_colors)
+
                 for i in range(len(indices)):
                     prev = np.flip(matched_prev_coords[i])
                     next = np.flip(matched_next_coords[i])
                     color = np.hstack((matched_colors[i], np.array((0.2))))
                     
                     match = ConnectionPatch(xyA=prev, xyB=next, coordsA="data", coordsB="data", axesA=ax1, axesB=ax2, color=color)
-                    fig.add_artist(match)
+                    fig5.add_artist(match)
                     
-                plt.show()
-                     
+                plt.savefig(f"/home/arion/AsteroidRenderMatched/{count:04}.png")
+                plt.close()
+                
+            if count % 10 == 0:
+                print("Rendered figures for " + f"{count/self._size:.0%}" + " of the described data")
+
+              
             count += 1
+            
+        print("Rendering finished")

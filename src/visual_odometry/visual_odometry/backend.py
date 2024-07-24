@@ -1,5 +1,6 @@
 import torch
 import cv2
+import time
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -36,41 +37,74 @@ class VOBackend:
         torch.set_default_device(self._device)
         print("GPU loaded. Using compute device: " + str(self._device))
 
+    def reject_outliers(self, data, m=2):
+        return data[np.abs(data - np.mean(data)) < m * np.std(data)]
+    
     def loop(self):
         count = 0
         
-        errors = []
+        errors_per_frame = []
+        errors_per_sample = []
+        
+        time_stats = []
 
         while count < self._size:
             data = self._frontend.receive(blocking=True)
             
             data_gpu = MotionUtils.to(data, device=self._device)
 
-            #out = self._vo.get_sampled_poses(data_gpu, num_samples=10)
-            out = self._vo.compute_pose(data_gpu)
+            start = time.time()
+            frame_out = self._vo.compute_pose(data_gpu)
+            time_stats.append(time.time() - start)
             
-            if out != None:
-                R, t = out
+            if frame_out != None:
+                R, t = frame_out
+                
+                extrinsics_prev = data.prev_points.proj.extrinsics.M.cpu().numpy()
+                extrinsics_next = data.next_points.proj.extrinsics.M.cpu().numpy()
+            
+                ground_truth = extrinsics_next[:3, :3] @ extrinsics_prev[:3, :3].T
+                error = R @ ground_truth.T
+                err, _ = cv2.Rodrigues(error)
+                
+                errors_per_frame.append(np.linalg.norm(err))
+                
+
+            samples_out = self._vo.get_sampled_poses(data_gpu, num_samples=1000)
+             
+            if samples_out != None:
+                R, t = samples_out
 
                 extrinsics_prev = data.prev_points.proj.extrinsics.M.cpu().numpy()
                 extrinsics_next = data.next_points.proj.extrinsics.M.cpu().numpy()
             
                 ground_truth = extrinsics_next[:3, :3] @ extrinsics_prev[:3, :3].T
                 
+                #print(R)
+                #print(ground_truth)
+                
                 error = R @ ground_truth.T
-
-                error = error[None, :]
-
-                for i in range(len(error)):   
-                    error_vec, _ = cv2.Rodrigues(error[i])
-                    mag_vec, _ = cv2.Rodrigues(ground_truth)
+                #error = error[None, :]
+                
+                origin = np.array((0, 0, 1))
+                expected_translation = (origin - R @ origin)[:, 0:2]
+                expected_translation = expected_translation / np.linalg.norm(expected_translation, axis=-1)[:, None]
+                coherence = expected_translation[:, None] @ t[:, 0:2]
+                
+                print(np.mean(coherence))
+                
+                for i in range(len(error)):
+                    #if error[i, 0, 0] > 0.9 and error[i, 1, 2] < 0:   
+                    #print(f"expected {expected_translation[i]}")
+                    #print(f"got {t[i]}")
                     
-                    #print(error_vec)
-                    #print(mag_vec)
+                    if coherence[i] > 0.0:
+                        err, _ = cv2.Rodrigues(error[i])
                         
-                    #sds = np.rad2deg(np.arccos((np.trace(error[i]) - 1) / 2))
-                    #errors.append(sds)
-                    errors.append(np.linalg.norm(error_vec) / np.linalg.norm(mag_vec))
+                        #sds = np.rad2deg(np.arccos((np.trace(error[i]) - 1) / 2))
+                        #errors.append(sds)
+                        errors_per_sample.append(np.linalg.norm(err) - np.pi)
+                        #errors.append(-err)
                 
             if count % 100 == 0:
                 print("Analyzed " + f"{count/self._size:.0%}" + " of synthetic feature data")
@@ -83,42 +117,21 @@ class VOBackend:
                  
             count += 1
             
-        np_errors = np.array(errors)
-        
-        plt.figure()
-        plt.hist(np_errors[np.abs(np_errors) < 10], bins=100)
-        plt.show()
-        
-        print(np.mean(np_errors))
+        np_errors_per_frame = np.array(errors_per_frame)
+        # plt.figure()
+        # plt.plot(np_errors_per_frame)
+        # plt.show()
 
-    # def loop(self):
-    #     count = 0
-        
-    #     errors = []
+        np_errors_per_sample = np.array(errors_per_sample)
+        # plt.figure()
+        # plt.hist(np_errors_per_sample, bins=1000)
+        # plt.show()
 
-    #     while count < self._size:
-    #         data = self._frontend.receive(blocking=True)
-    #         data_gpu = MotionUtils.to(data, device=self._device)
-            
-    #         R, t = self._vo.compute_pose(data_gpu)
-            
-    #         extrinsics_prev = data.prev_points.proj.extrinsics.M.cpu().numpy()
-    #         extrinsics_next = data.next_points.proj.extrinsics.M.cpu().numpy()
+
+        bias = np.mean(np_errors_per_frame)
+        std = np.std(np_errors_per_frame)
+        avg_time = np.median(time_stats)
         
-    #         ground_truth = extrinsics_next[:3, :3] @ extrinsics_prev[:3, :3].T
-    #         error = R @ ground_truth.T
-                        
-    #         error_vec, _ = cv2.Rodrigues(error)
-    #         mag_vec, _ = cv2.Rodrigues(ground_truth)
-            
-    #         errors.append(np.linalg.norm(error_vec) / np.linalg.norm(mag_vec))
-                 
-    #         count += 1
-            
-    #     np_errors = np.array(errors)
-        
-    #     plt.figure()
-    #     plt.plot(np_errors)
-    #     plt.show()
-        
-    #     print(np.mean(np_errors))
+        print(f"Bias: {bias}")
+        print(f"Std: {std}")
+        print(f"Median estimation time: {avg_time}ms")

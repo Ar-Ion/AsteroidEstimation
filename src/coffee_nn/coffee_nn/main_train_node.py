@@ -39,7 +39,7 @@ def main(args=None):
     matcher_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("matcher_config").items()))
     filter_params = dict(map(lambda x: (x[0], x[1].value), node.get_parameters_by_prefix("filter_config").items()))
 
-    world_size = 4
+    world_size = 1
     
     torch.multiprocessing.spawn(dispatch,
         args=(world_size, train_size, validate_size, input_params, descriptor_params, matcher_params, filter_params),
@@ -61,8 +61,8 @@ def cleanup():
 def dispatch(rank, world_size, train_size, validate_size, input_params, descriptor_params, matcher_params, filter_params):
     setup(rank, world_size)
     
-    gpu = GPU(rank, ddp=True)
-    
+    gpu = GPU(rank, ddp=False)
+
     train_frontend_wrapped = factory.instance(input_params, "train", train_size)
     train_frontend = AsyncFrontend(train_frontend_wrapped, wait=False, is_random=True)
     train_frontend.start()
