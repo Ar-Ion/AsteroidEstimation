@@ -65,18 +65,31 @@ class Trainer(ABC):
 
             for model_container in self._model_containers:
                 model_container.model.eval()
+                
+            start = torch.cuda.Event(enable_timing=True)
+            end = torch.cuda.Event(enable_timing=True)
+
+            start.record()
             
             # Run model on validation set
             for batch in self._phase.validate_dataloader:
                 with torch.set_grad_enabled(False):
                     batch_gpu = MotionUtils.to(batch, device=self._gpu.device)
+                    start.record()
                     (loss, stats) = self.forward(batch_gpu)
+                    end.record()
                     val_losses.append(loss.item())
                     val_stats.extend(stats)
                     
+            end.record()
+           
+            torch.cuda.synchronize()
+            
+            delta = start.elapsed_time(end)
+
             # Cloud reporting
             if self._logger != None:
-                self._logger.report(self._iter, train_losses, train_stats, val_losses, val_stats)
+                self._logger.report(self._iter, train_losses, train_stats, val_losses, val_stats, delta)
 
             # Update FSM
             self._iter += 1

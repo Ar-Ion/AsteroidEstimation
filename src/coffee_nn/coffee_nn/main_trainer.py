@@ -2,7 +2,7 @@ import torch
 
 from feature_matcher.backends import LightglueMatcher
 from feature_matcher.backends.metrics import L2
-from feature_matcher.backends.criteria import GreaterThan, LessThan, MinRatio, Intersection
+from feature_matcher.backends.criteria import GreaterThan, LessThan, MinRatio, Intersection, MaxK
 from benchmark.statistics import Statistics
 from feature_descriptor.backends.coffee import COFFEEDescriptor
 from astronet_utils import ProjectionUtils, MotionUtils
@@ -22,17 +22,17 @@ class MainTrainer(Trainer):
         validate_dp = TrainDataProvider(validate_frontend, int(validate_size))
         
         # 512 iterations per epoch, Batch size of 8, running for 100 epochs
-        self._main_phase = TrainPhase(train_dp, validate_dp, 512, 32, 100) # Active for 100 epochs
+        self._main_phase = TrainPhase(train_dp, validate_dp, 512, 4, 100) # Active for 100 epochs
         
         # Model instantiation
         self._descriptor = COFFEEDescriptor(gpu=gpu, autoload=False, **descriptor_params)
-        self._matcher = LightglueMatcher(gpu=gpu, criterion=GreaterThan(0.1), autoload=False, **matcher_params) # 0.2 is arbitrary and is tuned for evaluation. No influence on training.
+        self._matcher = LightglueMatcher(gpu=gpu, criterion=MaxK(100), autoload=False, **matcher_params) # 0.2 is arbitrary and is tuned for evaluation. No influence on training.
 
         # Domain randomization
         self._randomizer = Randomizer(1024, 1024, 0.5, 0.5)
 
         # Call parent constructor
-        super().__init__(gpu, [self._descriptor, self._matcher], self._main_phase, lr=0.001)
+        super().__init__(gpu, [self._descriptor, self._matcher], self._main_phase, lr=0.0001)
 
         ## Loss function metrics 
         self._loss_match = CrossEntropyLoss() # Cross-entropy, as specified in the LightGlue/SuperGlue paper

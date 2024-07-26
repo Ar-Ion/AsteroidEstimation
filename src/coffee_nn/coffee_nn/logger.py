@@ -6,7 +6,7 @@ class Logger:
     def __init__(self, name):
         wandb.init(project=name)
         
-    def report(self, iteration, train_losses, train_stats, val_losses, val_stats):
+    def report(self, iteration, train_losses, train_stats, val_losses, val_stats, delta_t):
         # Compute statistics
         avg_train_loss = torch.tensor(train_losses).nanmean()
         avg_val_loss = torch.tensor(val_losses).nanmean()
@@ -34,5 +34,6 @@ class Logger:
             "Validation recall": avg_val_recall*100, 
             "Train F1-Score": avg_train_f1*100, 
             "Validation F1-Score": avg_val_f1*100, 
-            "Pixel error": avg_pixel_error 
+            "Pixel error": avg_pixel_error,
+            "Inference time": delta_t
         })

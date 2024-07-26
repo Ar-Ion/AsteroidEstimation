@@ -40,18 +40,18 @@ class SparseSuperPoint(ME.MinkowskiNetwork):
         self.conv1b = self.create_downsampling_conv(32, 64)
 
         self.conv2a = self.create_convs(64, 1)
-        self.conv2b = self.create_downsampling_conv(64, 128)
+        self.conv2b = self.create_downsampling_conv(32, 128)
 
         self.conv3a = self.create_convs(128, 1)
         self.conv3b = self.create_downsampling_conv(128, 256)
         
-        #self.conv4 = self.create_upsampling_conv(256, 256)
-        #self.conv5 = self.create_upsampling_conv(256+128, 256+128)
-        #self.conv6 = self.create_upsampling_conv(256+128+64, 256+128+64)
+        self.conv4 = self.create_upsampling_conv(256, 256)
+        self.conv5 = self.create_upsampling_conv(256+128, 256+128)
+        self.conv6 = self.create_upsampling_conv(256+128+64, 256+128+64)
                 
-        self.mlp = self.create_mlp(256, 128)
+        #self.mlp = self.create_mlp(256, 128)
 
-        self.convMap = self.create_final_conv(128, 128)
+        self.convMap = self.create_final_conv(256+128+64+32, 256+128+64+32)
 
         self.interp = ME.MinkowskiInterpolation()
 
@@ -65,22 +65,22 @@ class SparseSuperPoint(ME.MinkowskiNetwork):
         out_s4 = self.conv3a(out)
         out = self.conv3b(out_s4)
         
-        #out = self.conv4(out)
-        #out = ME.cat(out, out_s4)
+        out = self.conv4(out)
+        out = ME.cat(out, out_s4)
         
-        #out = self.conv5(out)
-        #out = ME.cat(out, out_s2)
+        out = self.conv5(out)
+        out = ME.cat(out, out_s2)
         
-        #out = self.conv6(out)
-        #out = ME.cat(out, out_s1)
+        out = self.conv6(out)
+        out = ME.cat(out, out_s1)
         
-        out = self.mlp(out)
+        #out = self.mlp(out)
         out = self.convMap(out)
 
-        out_coords = x.coordinates
-        out_features = self.interp(out, out_coords.to(x.features.dtype))
+        #out_coords = x.coordinates
+        #out_features = self.interp(out, out_coords.to(x.features.dtype))
 
-        out = ME.SparseTensor(out_features.contiguous(), out_coords)
+        #out = ME.SparseTensor(out_features.contiguous(), out_coords)
 
         return MF.normalize(out, dim=1).features
 
