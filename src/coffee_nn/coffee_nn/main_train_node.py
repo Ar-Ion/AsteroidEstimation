@@ -1,6 +1,7 @@
 import rclpy
 import os
 import torch
+import random
 
 from astronet_frontends import AsyncFrontend, factory
 
@@ -65,6 +66,8 @@ def dispatch(rank, world_size, train_size, validate_size, input_params, descript
     
     gpu = GPU(rank, ddp=False)
 
+    gpu = GPU(rank, ddp=False)
+
     train_frontend_wrapped = factory.instance(input_params, "train", train_size)
     train_frontend = AsyncFrontend(train_frontend_wrapped, wait=False, is_random=True)
     train_frontend.start()
@@ -88,3 +91,4 @@ def dispatch(rank, world_size, train_size, validate_size, input_params, descript
         
 if __name__ == '__main__':
     main()
+

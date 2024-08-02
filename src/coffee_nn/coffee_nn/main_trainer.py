@@ -3,6 +3,7 @@ import torch
 from feature_matcher.backends import LightglueMatcher, ClassicalMatcher
 from feature_matcher.backends.metrics import L2
 from feature_matcher.backends.criteria import GreaterThan, LessThan, MinRatio, Intersection, MaxK
+from feature_matcher.backends.criteria import GreaterThan, LessThan, MinRatio, Intersection, MaxK
 from benchmark.statistics import Statistics
 from feature_descriptor.backends.coffee import COFFEEDescriptor
 from astronet_utils import ProjectionUtils, MotionUtils
@@ -22,7 +23,7 @@ class MainTrainer(Trainer):
         validate_dp = TrainDataProvider(validate_frontend, int(validate_size))
         
         # 512 iterations per epoch, Batch size of 8, running for 100 epochs
-        self._main_phase = TrainPhase(train_dp, validate_dp, 512, 8, 100) # Active for 100 epochs
+        self._main_phase = TrainPhase(train_dp, validate_dp, 512, 4, 100) # Active for 100 epochs
         
         # Model instantiation
         self._descriptor = COFFEEDescriptor(gpu=gpu, autoload=False, **descriptor_params)
@@ -44,6 +45,7 @@ class MainTrainer(Trainer):
         # The LessThen force matches to be pixels less than a given distance. Technically, the number should be sqrt(2) 
         # to match all neighbouring pixels but sometimes, the surface is smooth and the shadow doesn't by exactly one pixel.
         self._keypoints_criterion = Intersection(MinRatio(1), LessThan(1))
+        self._keypoints_criterion = Intersection(MinRatio(1), LessThan(1))
         
     ## Forward pass methods
     # Forwards a batch to the model
@@ -51,14 +53,17 @@ class MainTrainer(Trainer):
         # Descriptor forward (training)
         batch_output = self._descriptor.forward_motion(batch)
 
+
         batch_loss = 0
         batch_normalization = 0
 
         batch_stats = []
                             
         for idx in range(batch.num_batches):
+        for idx in range(batch.num_batches):
             # Compute loss sample per sample to save memory (can be improved for sure)
             output = MotionUtils.retrieve(batch_output, idx)
+
 
             # First, concatenate the ground-truth depth to the keypoints. prev_points_25D is then the depth image, as seen from the camera.
             prev_points_25D = torch.hstack((output.prev_points.kps, output.prev_points.depths[:, None]))

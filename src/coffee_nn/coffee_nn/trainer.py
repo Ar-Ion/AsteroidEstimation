@@ -84,7 +84,9 @@ class Trainer(ABC):
             for batch in self._phase.validate_dataloader:
                 with torch.set_grad_enabled(False):
                     batch_gpu = MotionUtils.to(batch, device=self._gpu.device)
+                    start.record()
                     (loss, stats) = self.forward(batch_gpu)
+                    end.record()
                     val_losses.append(loss.item())
                     val_stats.extend(stats)
                     
