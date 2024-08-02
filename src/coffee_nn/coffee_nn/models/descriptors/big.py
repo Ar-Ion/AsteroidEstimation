@@ -8,7 +8,7 @@ class SparseSuperPoint(ME.MinkowskiNetwork):
     
     BLOCK = Bottleneck
     LAYERS = (1, 1, 1, 1)
-    PLANES = (8, 16, 32, 64)
+    PLANES = (32, 64, 128, 256)
 
     def __init__(self, D=2):
         super(SparseSuperPoint, self).__init__(D)
@@ -18,7 +18,7 @@ class SparseSuperPoint(ME.MinkowskiNetwork):
         
         self.conv1 = nn.Sequential(
             ME.MinkowskiConvolution(
-                1, self.inplanes, kernel_size=3, stride=1, dimension=D
+                1, self.inplanes, kernel_size=7, stride=1, dimension=D
             ),
             ME.MinkowskiInstanceNorm(self.inplanes),
             ME.MinkowskiReLU(inplace=True),
@@ -34,11 +34,15 @@ class SparseSuperPoint(ME.MinkowskiNetwork):
         self.layer3 = self._make_layer(
             self.BLOCK, self.PLANES[2], self.LAYERS[2], stride=2
         )
+        self.layer4 = self._make_layer(
+            self.BLOCK, self.PLANES[3], self.LAYERS[3], stride=2
+        )
 
         self.conv5 = self.create_upsampling_conv(self.inplanes, 256)
         self.conv6 = self.create_upsampling_conv(256, 256)
         self.conv7 = self.create_upsampling_conv(256, 256)
         self.conv8 = self.create_upsampling_conv(256, 256)
+        self.conv9 = self.create_upsampling_conv(256, 256)
         
         for m in self.modules():
             if isinstance(m, ME.MinkowskiConvolution):
@@ -53,10 +57,12 @@ class SparseSuperPoint(ME.MinkowskiNetwork):
         out = self.layer1(out)
         out = self.layer2(out)
         out = self.layer3(out)
+        out = self.layer4(out)
         out = self.conv5(out)
         out = self.conv6(out)
         out = self.conv7(out)
         out = self.conv8(out)
+        out = self.conv9(out)
         
         return MF.normalize(out, dim=1)
     

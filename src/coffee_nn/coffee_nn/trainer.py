@@ -29,7 +29,7 @@ class Trainer(ABC):
                 
         # Optimizer instantiation
         self._params = chain(*[model_container.model.parameters() for model_container in model_containers])
-        self._optimizer = torch.optim.Adam(self._params , lr=lr, weight_decay=weight_decay)
+        self._optimizer = torch.optim.AdamW(self._params , lr=lr)
         self._scheduler = torch.optim.lr_scheduler.ExponentialLR(self._optimizer, gamma=gamma)
         
         # Load optimizer state
@@ -39,7 +39,10 @@ class Trainer(ABC):
             self._scheduler.load_state_dict(state['scheduler'])
 
     # Main loop. Called by the ROS node. Supposedly trains the neural network.
-    def loop(self):        
+    def loop(self):    
+        
+        best_f1 = 0
+            
         while self._phase != None:
             # Training
             train_losses = []
@@ -71,6 +74,11 @@ class Trainer(ABC):
 
             for model_container in self._model_containers:
                 model_container.model.eval()
+                
+            start = torch.cuda.Event(enable_timing=True)
+            end = torch.cuda.Event(enable_timing=True)
+
+            start.record()
             
             # Run model on validation set
             for batch in self._phase.validate_dataloader:
@@ -80,17 +88,25 @@ class Trainer(ABC):
                     val_losses.append(loss.item())
                     val_stats.extend(stats)
                     
+            end.record()
+           
+            torch.cuda.synchronize()
+            
+            delta = start.elapsed_time(end)
+
             # Cloud reporting
             if self._logger != None:
-                self._logger.report(self._iter, train_losses, train_stats, val_losses, val_stats)
+                self._logger.report(self._iter, train_losses, train_stats, val_losses, val_stats, delta)
 
             # Update FSM
             self._iter += 1
             self._phase.tick()
             self._phase = self._phase.transition()
             
+            avg_val_f1 = torch.tensor(list(map(lambda x: x.f1(), val_stats))).nanmean()
+
             # Save the model periodically
-            if self._iter % 10 == 0:
+            if avg_val_f1 > best_f1:
                 state = {
                     'optimizer': self._optimizer.state_dict(),
                     'scheduler': self._scheduler.state_dict()
@@ -100,6 +116,10 @@ class Trainer(ABC):
 
                 for model_container in self._model_containers:
                     model_container.save()
+                                        
+                best_f1 = avg_val_f1
+                
+                print(f"Best F1 score is now {best_f1}")
                 
         self.cleanup()
         

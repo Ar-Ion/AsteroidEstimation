@@ -2,7 +2,7 @@ import torch
 
 from feature_matcher.backends import LightglueMatcher, ClassicalMatcher
 from feature_matcher.backends.metrics import L2
-from feature_matcher.backends.criteria import GreaterThan, LessThan, MinRatio, Intersection
+from feature_matcher.backends.criteria import GreaterThan, LessThan, MinRatio, Intersection, MaxK
 from benchmark.statistics import Statistics
 from feature_descriptor.backends.coffee import COFFEEDescriptor
 from astronet_utils import ProjectionUtils, MotionUtils
@@ -22,44 +22,44 @@ class MainTrainer(Trainer):
         validate_dp = TrainDataProvider(validate_frontend, int(validate_size))
         
         # 512 iterations per epoch, Batch size of 8, running for 100 epochs
-        self._main_phase = TrainPhase(train_dp, validate_dp, 512, 4, 100) # Active for 100 epochs
+        self._main_phase = TrainPhase(train_dp, validate_dp, 512, 8, 100) # Active for 100 epochs
         
         # Model instantiation
         self._descriptor = COFFEEDescriptor(gpu=gpu, autoload=False, **descriptor_params)
-        # self._matcher = LightglueMatcher(gpu=gpu, criterion=GreaterThan(0.1), autoload=False, **matcher_params) # 0.2 is arbitrary and is tuned for evaluation. No influence on training.
-        self._matcher = ClassicalMatcher(criterion=GreaterThan(0.75), metric="Cosine")
+        self._matcher = LightglueMatcher(gpu=gpu, criterion=MaxK(100), autoload=False, **matcher_params) # 0.2 is arbitrary and is tuned for evaluation. No influence on training.
+        # self._matcher = ClassicalMatcher(criterion=GreaterThan(0.75), metric="Cosine")
 
         # Domain randomization
         self._randomizer = Randomizer(1024, 1024, 0.5, 0.5)
 
         # Call parent constructor
-        super().__init__(gpu, [self._descriptor], self._main_phase, lr=0.0001, load_opt_state=False)
+        super().__init__(gpu, [self._descriptor, self._matcher], self._main_phase, lr=0.0001, gamma=0.9999)
 
         ## Loss function metrics 
         #self._loss_match = CrossEntropyLoss() # Cross-entropy, as specified in the LightGlue/SuperGlue paper
         self._keypoints_metric = L2 # L2 norm to match pixels in image-space
-        self._loss_match = HingeLoss(0.4, 0.1)
+        self._loss_match = CrossEntropyLoss()
 
         # The MinRatio is used to force a maximum of one match per pixel, as required by the optimal transport algorithm. 
         # The LessThen force matches to be pixels less than a given distance. Technically, the number should be sqrt(2) 
         # to match all neighbouring pixels but sometimes, the surface is smooth and the shadow doesn't by exactly one pixel.
-        self._keypoints_criterion = Intersection(MinRatio(1.0), LessThan(1))
-                
+        self._keypoints_criterion = Intersection(MinRatio(1), LessThan(1))
+        
     ## Forward pass methods
     # Forwards a batch to the model
     def forward(self, batch):    
         # Descriptor forward (training)
         batch_output = self._descriptor.forward_motion(batch)
-        
+
         batch_loss = 0
         batch_normalization = 0
 
         batch_stats = []
                             
-        for idx in range(batch_output.num_batches):
+        for idx in range(batch.num_batches):
             # Compute loss sample per sample to save memory (can be improved for sure)
             output = MotionUtils.retrieve(batch_output, idx)
-            
+
             # First, concatenate the ground-truth depth to the keypoints. prev_points_25D is then the depth image, as seen from the camera.
             prev_points_25D = torch.hstack((output.prev_points.kps, output.prev_points.depths[:, None]))
             # Then, back-project from the camera space to the object space.

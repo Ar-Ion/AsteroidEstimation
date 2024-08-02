@@ -9,16 +9,16 @@ eval_benchmarker:
       features:
         matcher: "ClassicalMatcher"
         matcher_args: ["Cosine"]
-        criterion: "MaxRatio"
-        criterion_args: [1.0]
+        criterion: "GreaterThan"
+        criterion_args: [0.9]
 
 eval_vo:
   ros__parameters: 
     config:
       matcher: "ClassicalMatcher"
       matcher_args: ["Cosine"]
-      criterion: "MaxRatio"
-      criterion_args: [0.8]
+      criterion: "MaxK"
+      criterion_args: [100.0]
 
 eval_slam:
   ros__parameters: 

@@ -4,21 +4,21 @@ eval_benchmarker:
       keypoints:
         metric: "L2"
         criterion: "LessThan"
-        criterion_args: [4.0]
+        criterion_args: [1.0]
 
       features:
         matcher: "ClassicalMatcher"
         matcher_args: ["L2"]
-        criterion: "LessThan"
-        criterion_args: [1.0]
+        criterion: "MinRatio"
+        criterion_args: [0.8]
 
 eval_vo:
   ros__parameters: 
     config:
       matcher: "ClassicalMatcher"
       matcher_args: ["L2"]
-      criterion: "LessThan"
-      criterion_args: [1.0]
+      criterion: "MinRatio"
+      criterion_args: [0.8]
 
 eval_slam:
   ros__parameters: 

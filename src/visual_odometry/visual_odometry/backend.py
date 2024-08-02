@@ -4,7 +4,7 @@ import time
 import numpy as np
 from matplotlib import pyplot as plt
 
-from feature_matcher.backends.criteria import MatchCriterion
+from feature_matcher.backends.criteria import MatchCriterion, Intersection, MinRatio, MaxRatio
 from feature_matcher.backends import Matcher
 from astronet_utils import MotionUtils
 from .vo import VisualOdometry
@@ -27,7 +27,12 @@ class VOBackend:
             matcher_args = []
 
         matcher = Matcher.instance(config["matcher"], *matcher_args)
-        criterion = MatchCriterion.instance(config["criterion"], *criterion_args)
+        
+        if config["criterion"] == "MinK":
+            criterion = Intersection(MinRatio(1), MatchCriterion.instance(config["criterion"], *criterion_args))
+        else:
+            criterion = Intersection(MaxRatio(1), MatchCriterion.instance(config["criterion"], *criterion_args))
+
         matcher.set_criterion(criterion)
         
         self._vo = VisualOdometry(matcher)

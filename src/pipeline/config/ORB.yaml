@@ -9,16 +9,16 @@ eval_benchmarker:
       features:
         matcher: "ClassicalMatcher"
         matcher_args: ["Hamming"]
-        criterion: "MinRatio"
-        criterion_args: [1.0]
+        criterion: "LessThan"
+        criterion_args: [25.0]
 
 eval_vo:
   ros__parameters: 
     config:
       matcher: "ClassicalMatcher"
       matcher_args: ["Hamming"]
-      criterion: "MinRatio"
-      criterion_args: [0.9]
+      criterion: "MinK"
+      criterion_args: [2000.0]
 
       # features:
       #   metric: "L2"

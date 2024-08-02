@@ -27,7 +27,7 @@ class SimpleStats:
             matcher_args = []
 
         self._keypoints_metric = MatchMetric.instance(config["keypoints.metric"])
-        self._keypoints_criterion = MatchCriterion.instance(config["keypoints.criterion"], *keypoints_criterion_args)
+        self._keypoints_criterion = Intersection(MinRatio(1.0), LessThan(8))#MatchCriterion.instance(config["keypoints.criterion"], *keypoints_criterion_args)
         
         self._matcher = Matcher.instance(config["features.matcher"], *matcher_args)
         features_criterion = MatchCriterion.instance(config["features.criterion"], *features_criterion_args)
@@ -42,6 +42,7 @@ class SimpleStats:
         count = 0
 
         stats = []
+        bias = []
         feature_count = 0
         
         avg_batch_size = 0
@@ -68,9 +69,14 @@ class SimpleStats:
 
                 true_dists = self._keypoints_metric.dist(reproj_points_2D, data.next_points.kps)
                 true_matches = self._keypoints_criterion.apply(true_dists)
-                                
+                                     
+                distance_matrix = (reproj_points_2D[:, None, :] - data.next_points.kps[None, :, :]).squeeze()[:, :, 1]
+                bias.append((distance_matrix[true_matches.to(dtype=torch.bool)]))
+                
+                
+                
                 pred_dists, pred_matches = self._matcher.match(data)
-                         
+                                    
                 indices = torch.nonzero(pred_matches)
         
                 all_coords_prev = data.prev_points.kps
@@ -97,6 +103,12 @@ class SimpleStats:
             if count % 100 == 0:
                 print("Computed statistics for " + f"{count/self._size:.0%}" + " of the described data")
 
+        # plt.figure()
+        # plt.hist(torch.hstack(bias).cpu().numpy(), bins=200)
+        # plt.show()
+
+        avg_bias = torch.hstack(bias).mean()
+                
         avg_batch_size /= self._size
         avg_accuracy = torch.tensor(list(map(lambda x: x.accuracy(), stats))).nanmean()
         avg_precision = torch.tensor(list(map(lambda x: x.precision(), stats))).nanmean()
@@ -115,3 +127,4 @@ class SimpleStats:
         print(f"Average true count: {avg_true_count}")
         print(f"Average positive count: {avg_positive_count}")
         print(f"Average pixel location error: {avg_pixel_error}")
+        print(f"Bias: {avg_bias}")

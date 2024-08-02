@@ -44,13 +44,10 @@ main_trainer:
       path: "/home/arion/AsteroidChunkedMotionDataset"
 
     descriptor_config:
-      model_path: "/home/arion/AsteroidDescriptorModel.pth"
+      model_path: "/home/arion/AsteroidDescriptorModel_resnet.pth"
 
     matcher_config:
-      model_path: "/home/arion/AsteroidMatcherModel.pth"
-
-    filter_config:
-      model_path: "/home/arion/AsteroidFilterModel.pth"
+      model_path: "/home/arion/AsteroidMatcherModel_resnet.pth"
 
 filter_trainer:
   ros__parameters:

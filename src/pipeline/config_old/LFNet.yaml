@@ -8,17 +8,26 @@ eval_benchmarker:
 
       features:
         matcher: "ClassicalMatcher"
-        matcher_args: ["Cosine"]
-        criterion: "GreaterThan"
-        criterion_args: [0.75]
+        matcher_args: ["L2"]
+        criterion: "MinRatio"
+        criterion_args: [0.8]
 
 eval_vo:
   ros__parameters: 
     config:
       matcher: "ClassicalMatcher"
-      matcher_args: ["Cosine"]
-      criterion: "MaxK"
+      matcher_args: ["L2"]
+      criterion: "MinRatio"
+      criterion_args: [0.8]
+
+eval_slam:
+  ros__parameters: 
+    config:
+      matcher: "ClassicalMatcher"
+      matcher_args: ["L2"]
+      criterion: "MinK"
       criterion_args: [200.0]
+
 
       # features:
       #   metric: "L2"

@@ -18,4 +18,4 @@ class CrossEntropyLoss(LossFunction):
         
         reward = pred_dists * truth
     
-        return -reward.sum(), 1
+        return -reward.sum(), 1 # truth.sum() Normalizing the loss breaks everything in the optimizer

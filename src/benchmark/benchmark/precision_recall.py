@@ -49,8 +49,9 @@ class PrecisionRecall:
 
     def loop(self):                
         baseline = torch.log10(torch.tensor(self._matcher_criterion_args[0]))
-        param_sweep = torch.logspace(baseline - 0.5, baseline + 0.3, 100)
-        #param_sweep = torch.linspace(0, 1, 100)
+        #param_sweep = torch.logspace(baseline - 0.5, baseline + 0.3, 100)
+        #param_sweep = torch.logspace(baseline - 3, 0, 100)
+        param_sweep = torch.linspace(0.5, 1, 100)
         
         precision_recall = []
         f1 = []

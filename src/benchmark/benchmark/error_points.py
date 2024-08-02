@@ -3,7 +3,7 @@ import torch
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from feature_matcher.backends.criteria import MatchCriterion
+from feature_matcher.backends.criteria import MatchCriterion, Intersection, MinRatio, MaxRatio, MinK, MaxK
 from feature_matcher.backends.metrics import MatchMetric
 from feature_matcher.backends import Matcher
 from astronet_utils import MotionUtils, PointsUtils, ProjectionUtils
@@ -46,7 +46,7 @@ class ErrorPoints:
 
     def loop(self):
         baseline = torch.log10(torch.tensor(self._matcher_criterion_args[0]))
-        param_sweep = torch.logspace(baseline - 1, baseline + 1, 100)
+        param_sweep = torch.linspace(10, 1000, 100)
         error_points = []
         
         for param_idx in range(len(param_sweep)):
@@ -75,7 +75,11 @@ class ErrorPoints:
                     true_dists = self._keypoints_metric.dist(reproj_points_2D, data.next_points.kps)
                     true_matches = self._keypoints_criterion.apply(true_dists)
                     
-                    features_criterion = MatchCriterion.instance(self._matcher_criterion, param)
+                    if self._matcher_criterion == "MinK":
+                        features_criterion = Intersection(MinRatio(0.9), MatchCriterion.instance(self._matcher_criterion, param))
+                    else:
+                        features_criterion = Intersection(MaxRatio(0.9), MatchCriterion.instance(self._matcher_criterion, param))
+
                     self._matcher.set_criterion(features_criterion)
                     pred_dists, pred_matches = self._matcher.match(data)
                     
@@ -88,9 +92,9 @@ class ErrorPoints:
 
             print("Error-points sweep status: " + f"{param_idx/len(param_sweep):.0%}")
 
-            avg_error = torch.tensor(list(map(lambda x: x.pixel_error(), stats))).nanmean()
+            avg_error = torch.tensor(list(map(lambda x: x.median_pixel_error(), stats))).nanmean()
             avg_points = torch.tensor(list(map(lambda x: x.positive_count(), stats))).nanmean()
-            
+                        
             error_points.append(torch.tensor((avg_points, avg_error)))
                         
         error_points_curve = torch.vstack(error_points).cpu()
@@ -99,11 +103,9 @@ class ErrorPoints:
         df.to_csv(self._csv_out)
                 
         plt.figure(figsize=(8, 6))
-        plt.loglog(error_points_curve[:, 0], error_points_curve[:, 1], marker='o', linestyle='-')
+        plt.plot(error_points_curve[:, 0], error_points_curve[:, 1], marker='o', linestyle='-')
         plt.xlabel('Number of points')
         plt.ylabel('Error [pixels]')
         plt.title('Error-Points Curve')
         plt.grid(True)
-        plt.xlim([1e0, 1e4])
-        #plt.ylim([1e-1, 1e1])
         plt.show()

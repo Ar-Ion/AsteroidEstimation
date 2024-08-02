@@ -1,3 +1,5 @@
+import torch
+
 class Statistics:
     def __init__(self, true_dists, true_matches, pred_matches):
         self._true_count = true_matches.sum()
@@ -7,7 +9,8 @@ class Statistics:
         self._fp = ((1-true_matches) * pred_matches).mean()
         self._fn = (true_matches * (1-pred_matches)).mean()
         self._dist = (pred_matches * true_dists).abs().sum() / pred_matches.count_nonzero()
-        
+        self._median_dist = (pred_matches * true_dists).reshape(1, -1)[pred_matches.reshape(1, -1).to(dtype=torch.bool)].median()
+
     def true_positives(self):
         return self._tp
 
@@ -40,6 +43,9 @@ class Statistics:
     
     def pixel_error(self):
         return self._dist
+    
+    def median_pixel_error(self):
+        return self._median_dist
     
     def f1(self):
         return 2*self._tp / (2*self._tp + self._fp + self._fn)

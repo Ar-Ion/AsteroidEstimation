@@ -31,8 +31,8 @@ class TrainedCOFFEEBackend(UntrainedCOFFEEBackend):
             mu = filtered_features.mean()
             sigma = filtered_features.std()
             
-            out_features = self._descriptor.forward_sparse(filtered_coords, (filtered_features - mu) / sigma)
+            out = self._descriptor.forward_sparse(filtered_coords, (filtered_features - mu) / sigma)
                
-        return (filtered_coords[:, 1:3].cpu(), out_features.cpu())
+        return (out.coordinates[:, 1:3].cpu(), out.features.cpu())
         
         

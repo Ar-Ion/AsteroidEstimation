@@ -320,10 +320,10 @@ class LightGlue(nn.Module):
         "n_layers": 9,
         "num_heads": 4,
         "flash": True,  # enable FlashAttention if available.
-        "mp": False,  # enable mixed precision
-        "depth_confidence": -1,  # early stopping, disable with -1
+        "mp": True,  # enable mixed precision
+        "depth_confidence": 0.95,  # early stopping, disable with -1
         "width_confidence": -1,  # point pruning, disable with -1
-        "filter_threshold": 0.3,  # match threshold
+        "filter_threshold": 0.1,
         "weights": None,
     }
 
@@ -365,8 +365,8 @@ class LightGlue(nn.Module):
             "add_scale_ori": True,
         },
         "coffee": {
-            "input_dim": 128,
-            "descriptor_dim": 128
+            "input_dim": 256,
+            "descriptor_dim": 256
         },
     }
 

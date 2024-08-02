@@ -4,30 +4,21 @@ eval_benchmarker:
       keypoints:
         metric: "L2"
         criterion: "LessThan"
-        criterion_args: [4.0]
+        criterion_args: [1.0]
 
       features:
         matcher: "ClassicalMatcher"
-        matcher_args: ["L2"]
+        matcher_args: ["Hamming"]
         criterion: "LessThan"
-        criterion_args: [0.7]
+        criterion_args: [25.0]
 
 eval_vo:
   ros__parameters: 
     config:
       matcher: "ClassicalMatcher"
-      matcher_args: ["L2"]
+      matcher_args: ["Hamming"]
       criterion: "LessThan"
-      criterion_args: [0.7]
-
-eval_slam:
-  ros__parameters: 
-    config:
-      matcher: "ClassicalMatcher"
-      matcher_args: ["L2"]
-      criterion: "MinK"
-      criterion_args: [200.0]
-
+      criterion_args: [25.0]
 
       # features:
       #   metric: "L2"

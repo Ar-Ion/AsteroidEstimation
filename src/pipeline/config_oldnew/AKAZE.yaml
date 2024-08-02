@@ -4,7 +4,7 @@ eval_benchmarker:
       keypoints:
         metric: "L2"
         criterion: "LessThan"
-        criterion_args: [4.0]
+        criterion_args: [1.0]
 
       features:
         matcher: "ClassicalMatcher"

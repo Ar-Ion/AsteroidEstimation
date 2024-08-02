@@ -23,10 +23,10 @@ eval_vo:
       # matcher_args: ["/home/arion/AsteroidMatcherModel16Jul.pth"]
       # criterion: "MaxK"
       # criterion_args: [200.0]
-      matcher: "LightglueMatcher"
-      matcher_args: ["/home/arion/AsteroidMatcherModel1Aug.pth"]
-      criterion: "MaxK"
-      criterion_args: [2000.0]
+      matcher: "ClassicalMatcher"
+      matcher_args: ["Cosine"]
+      criterion: "GreaterThan"
+      criterion_args: [0.9]
 
 eval_slam:
   ros__parameters: 

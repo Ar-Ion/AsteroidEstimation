@@ -50,8 +50,10 @@ class MotionProcessingModel(Model):
         prev_out = self.forward_sparse(motion.prev_points.kps, motion.prev_points.features)
         next_out = self.forward_sparse(motion.next_points.kps, motion.next_points.features)
                 
-        motion.prev_points.features = prev_out       
-        motion.next_points.features = next_out
+        motion.prev_points.kps = prev_out.coordinates       
+        motion.prev_points.features = prev_out.features       
+        motion.next_points.kps = next_out.coordinates       
+        motion.next_points.features = next_out.features
         
         return motion
 
@@ -59,5 +61,5 @@ class MotionProcessingModel(Model):
     def forward_sparse(self, input_coords, input_features):
         input = ME.SparseTensor(input_features, input_coords)
         out = self.model.forward(input)
-        return out.features
+        return out
         

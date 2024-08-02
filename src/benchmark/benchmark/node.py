@@ -65,10 +65,10 @@ def main(args=None):
     visualize = Visualize(frontend, images_frontend, size, config)
 
     try:
-        simple_stats.loop()       
-        #error_points.loop()
-        precision_recall.loop()
-        visualize.loop() 
+        #simple_stats.loop()       
+        error_points.loop()
+        #precision_recall.loop()
+        #visualize.loop() 
         
         rclpy.shutdown()
     except KeyboardInterrupt:

@@ -33,8 +33,9 @@ class VisualOdometry:
 
             K = data.prev_points.proj.intrinsics.K.cpu().numpy()
             
-            F, mask = cv2.findFundamentalMat(coords_prev, coords_next, method=cv2.FM_RANSAC, ransacReprojThreshold=0.5)
-            E = K.T @ F @ K
+            #F, mask = cv2.findFundamentalMat(coords_prev, coords_next, method=cv2.FM_RANSAC, ransacReprojThreshold=0.5)
+            E, mask = cv2.findEssentialMat(coords_prev, coords_next, K, method=cv2.RANSAC, threshold=1)
+            #E = K.T @ F @ K
 
             _, R, t, _ = cv2.recoverPose(E[:3, :3], coords_prev, coords_next, K, mask)
 

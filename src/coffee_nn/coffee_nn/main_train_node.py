@@ -41,6 +41,8 @@ def main(args=None):
 
     world_size = 1
     
+    #dispatch(0, world_size, train_size, validate_size, input_params, descriptor_params, matcher_params, filter_params)
+    
     torch.multiprocessing.spawn(dispatch,
         args=(world_size, train_size, validate_size, input_params, descriptor_params, matcher_params, filter_params),
         nprocs=world_size,
@@ -50,7 +52,7 @@ def main(args=None):
 def setup(rank, world_size):
     print(f"Running trainer on rank {rank}.")
     os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '42666'
+    os.environ['MASTER_PORT'] = '42672'
 
     # initialize the process group
     torch.distributed.init_process_group("gloo", rank=rank, world_size=world_size)
